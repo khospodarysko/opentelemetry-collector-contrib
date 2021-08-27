@@ -15,9 +15,46 @@
 package googlecloudspannerreceiver
 
 import (
+	"context"
+	"time"
+
 	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/config"
+	"go.opentelemetry.io/collector/consumer"
+	"go.opentelemetry.io/collector/receiver/receiverhelper"
+	"go.opentelemetry.io/collector/receiver/scraperhelper"
+)
+
+const (
+	typeStr = "googlecloudspannerreceiver"
+
+	defaultCollectionInterval = 10 * time.Second
 )
 
 func NewFactory() component.ReceiverFactory {
-	return nil
+	return receiverhelper.NewFactory(
+		typeStr,
+		createDefaultConfig,
+		receiverhelper.WithMetrics(createMetricsReceiver))
+}
+
+func createDefaultConfig() config.Receiver {
+	return &Config{
+		ScraperControllerSettings: scraperhelper.ScraperControllerSettings{
+			ReceiverSettings:   config.NewReceiverSettings(config.NewID(typeStr)),
+			CollectionInterval: defaultCollectionInterval,
+		},
+	}
+}
+
+func createMetricsReceiver(
+	_ context.Context,
+	params component.ReceiverCreateSettings,
+	baseCfg config.Receiver,
+	consumer consumer.Metrics,
+) (component.MetricsReceiver, error) {
+
+	rCfg := baseCfg.(*Config)
+	logger := params.Logger
+	return newGoogleCloudSpannerReceiver(logger, rCfg, consumer)
 }
