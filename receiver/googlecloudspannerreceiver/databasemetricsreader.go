@@ -130,9 +130,10 @@ func (v *QueryStatsTotalMinute) ConvertToExecutionCountMetrics(dbname string) pd
 
 	dataPoint.SetIntVal(v.ExecutionCount)
 	dataPoint.SetTimestamp(pdata.TimestampFromTime(time.Now()))
-	labels := pdata.NewStringMap()
-	labels.Insert("dbname", dbname)
-	labels.CopyTo(dataPoint.LabelsMap())
+	// TODO find a way to set labels
+	//labels := pdata.NewStringMap()
+	//labels.Insert("dbname", dbname)
+	//labels.CopyTo(dataPoint.LabelsMap())
 
 	return md
 }
