@@ -17,21 +17,18 @@ package googlecloudspannerreceiver
 import (
 	"context"
 	"fmt"
-	"log"
-	"time"
-
 	"go.opentelemetry.io/collector/model/pdata"
 
 	"cloud.google.com/go/spanner"
 	"go.uber.org/zap"
-	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 )
 
 type DatabaseMetricsReader struct {
-	client           *spanner.Client
-	fullDatabaseName string
-	logger           *zap.Logger
+	client                *spanner.Client
+	fullDatabaseName      string
+	logger                *zap.Logger
+	metricsReaderMetadata []*MetricsReaderMetadata
 }
 
 func NewDatabaseMetricsReader(ctx context.Context, projectId string, instanceId string, databaseName string,
@@ -47,6 +44,7 @@ func NewDatabaseMetricsReader(ctx context.Context, projectId string, instanceId 
 		client:           client,
 		fullDatabaseName: fullDatabaseName,
 		logger:           logger,
+		metricsReaderMetadata: []*MetricsReaderMetadata{ NewTopQueryStatsMetricsReaderMetadata(projectId, instanceId, databaseName)},
 	}, nil
 }
 
@@ -76,65 +74,15 @@ func (reader *DatabaseMetricsReader) ReadMetrics(ctx context.Context) []pdata.Me
 
 	var result []pdata.Metrics
 
-	stmt := spanner.Statement{SQL: "SELECT interval_end, execution_count FROM spanner_sys.query_stats_total_minute WHERE interval_end = (SELECT MAX(interval_end) FROM spanner_sys.query_stats_top_minute);"}
-	rowsIterator := reader.client.Single().Query(ctx, stmt)
-	defer rowsIterator.Stop()
+	for _, metadata := range reader.metricsReaderMetadata {
+		metrics, err := metadata.ReadMetrics(ctx, reader.client, reader.logger)
 
-	for {
-		row, err := rowsIterator.Next()
-		if err == iterator.Done {
-			fmt.Println("Done")
-			return result
-		}
 		if err != nil {
-			log.Fatalf("Query failed with %v", err)
-			return result
+			reader.logger.Error(fmt.Sprintf("Cannot read data for metrics metadata %v because of and error %v", metadata.Name, err))
+		} else {
+			result = append(result, metrics...)
 		}
-
-		var statsTotalMinute QueryStatsTotalMinute
-		err = row.ToStruct(&statsTotalMinute)
-		if err != nil {
-			log.Fatalf("ToStruct transform failed with %v", err)
-			return result
-		}
-		fmt.Printf("Got value %v\n", statsTotalMinute)
-		result = append(result, statsTotalMinute.ConvertToExecutionCountMetrics(reader.client.DatabaseName()))
 	}
 
 	return result
-}
-
-type QueryStatsTotalMinute struct {
-	IntervalEnd    time.Time `spanner:"interval_end"`
-	ExecutionCount int64     `spanner:"execution_count"`
-}
-
-func (v *QueryStatsTotalMinute) ConvertToExecutionCountMetrics(dbname string) pdata.Metrics {
-	fmt.Printf("Struct values - IntervalEnd:%v ExecutionCount:%v\n", v.IntervalEnd, v.ExecutionCount)
-
-	md := pdata.NewMetrics()
-	rms := md.ResourceMetrics()
-	rm := rms.AppendEmpty()
-	//resource := rm.Resource()
-	//resource.Attributes().UpsertString("koskey", "kosvalue")
-
-	ilms := rm.InstrumentationLibraryMetrics()
-	ilm := ilms.AppendEmpty()
-	metric := ilm.Metrics().AppendEmpty()
-	metric.SetName("lohika_gcp_total_minute_execution_count")
-	metric.SetUnit("one")
-	metric.SetDataType(pdata.MetricDataTypeGauge)
-	intGauge := metric.Gauge()
-	dataPoints := intGauge.DataPoints()
-	dataPoint := dataPoints.AppendEmpty()
-
-	dataPoint.SetIntVal(v.ExecutionCount)
-	dataPoint.SetTimestamp(pdata.TimestampFromTime(time.Now()))
-	// TODO find a way to set labels
-	dataPoint.Attributes().InsertString("dbname", dbname)
-	//labels := pdata.NewStringMap()
-	//labels.Insert("dbname", dbname)
-	//labels.CopyTo(dataPoint.LabelsMap())
-
-	return md
 }
