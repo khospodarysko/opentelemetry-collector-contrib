@@ -44,7 +44,10 @@ func NewDatabaseMetricsReader(ctx context.Context, projectId string, instanceId 
 		client:           client,
 		fullDatabaseName: fullDatabaseName,
 		logger:           logger,
-		metricsReaderMetadata: []*MetricsReaderMetadata{ NewTopQueryStatsMetricsReaderMetadata(projectId, instanceId, databaseName)},
+		metricsReaderMetadata: []*MetricsReaderMetadata{
+			NewTopQueryStatsMetricsReaderMetadata(projectId, instanceId, databaseName),
+			NewTotalQueryStatsMetricsReaderMetadata(projectId, instanceId, databaseName),
+		},
 	}, nil
 }
 

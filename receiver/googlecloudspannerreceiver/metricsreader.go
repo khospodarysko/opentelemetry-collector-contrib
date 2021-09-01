@@ -526,3 +526,121 @@ func NewTopQueryStatsMetricsReaderMetadata(
 		QueryMetricValuesMetadata: queryMetricValuesMetadata,
 	}
 }
+
+func NewTotalQueryStatsMetricsReaderMetadata(
+	projectId string,
+	instanceId string,
+	databaseName string) *MetricsReaderMetadata {
+
+	query := "SELECT * FROM spanner_sys.query_stats_total_minute " +
+		"WHERE interval_end = (SELECT MAX(interval_end) FROM spanner_sys.query_stats_top_minute)" +
+		"ORDER BY INTERVAL_END DESC LIMIT 10"
+	timestampColumnName := "INTERVAL_END"
+
+	// Labels
+	queryLabelValuesMetadata := []LabelValueMetadata{}
+
+	// Metrics
+	queryMetricValuesMetadata := []MetricValueMetadata{
+		Int64MetricValueMetadata{
+			QueryMetricValueMetadata{
+				MetricName:       "total_minute.execution_count",
+				MetricColumnName: "EXECUTION_COUNT",
+				MetricDataType:   pdata.MetricDataTypeGauge,
+				MetricUnit:       "one",
+			},
+		},
+
+		Float64MetricValueMetadata{
+			QueryMetricValueMetadata{
+				MetricName:       "total_minute.avg_latency_seconds",
+				MetricColumnName: "AVG_LATENCY_SECONDS",
+				MetricDataType:   pdata.MetricDataTypeGauge,
+				MetricUnit:       "seconds",
+			},
+		},
+
+		Float64MetricValueMetadata{
+			QueryMetricValueMetadata{
+				MetricName:       "total_minute.avg_rows",
+				MetricColumnName: "AVG_ROWS",
+				MetricDataType:   pdata.MetricDataTypeGauge,
+				MetricUnit:       "one",
+			},
+		},
+
+		Float64MetricValueMetadata{
+			QueryMetricValueMetadata{
+				MetricName:       "total_minute.avg_bytes",
+				MetricColumnName: "AVG_BYTES",
+				MetricDataType:   pdata.MetricDataTypeGauge,
+				MetricUnit:       "bytes",
+			},
+		},
+
+		Float64MetricValueMetadata{
+			QueryMetricValueMetadata{
+				MetricName:       "total_minute.avg_rows_scanned",
+				MetricColumnName: "AVG_ROWS_SCANNED",
+				MetricDataType:   pdata.MetricDataTypeGauge,
+				MetricUnit:       "one",
+			},
+		},
+
+		Float64MetricValueMetadata{
+			QueryMetricValueMetadata{
+				MetricName:       "total_minute.avg_cpu_seconds",
+				MetricColumnName: "AVG_CPU_SECONDS",
+				MetricDataType:   pdata.MetricDataTypeGauge,
+				MetricUnit:       "seconds",
+			},
+		},
+
+		Int64MetricValueMetadata{
+			QueryMetricValueMetadata{
+				MetricName:       "total_minute.all_failed_execution_count",
+				MetricColumnName: "ALL_FAILED_EXECUTION_COUNT",
+				MetricDataType:   pdata.MetricDataTypeGauge,
+				MetricUnit:       "one",
+			},
+		},
+
+		Float64MetricValueMetadata{
+			QueryMetricValueMetadata{
+				MetricName:       "all_failed_avg_latency_seconds",
+				MetricColumnName: "ALL_FAILED_AVG_LATENCY_SECONDS",
+				MetricDataType:   pdata.MetricDataTypeGauge,
+				MetricUnit:       "seconds",
+			},
+		},
+
+		Int64MetricValueMetadata{
+			QueryMetricValueMetadata{
+				MetricName:       "total_minute.cancelled_or_disconnected_execution_count",
+				MetricColumnName: "CANCELLED_OR_DISCONNECTED_EXECUTION_COUNT",
+				MetricDataType:   pdata.MetricDataTypeGauge,
+				MetricUnit:       "one",
+			},
+		},
+
+		Int64MetricValueMetadata{
+			QueryMetricValueMetadata{
+				MetricName:       "total_minute.timed_out_execution_count",
+				MetricColumnName: "TIMED_OUT_EXECUTION_COUNT",
+				MetricDataType:   pdata.MetricDataTypeGauge,
+				MetricUnit:       "one",
+			},
+		},
+	}
+
+	return &MetricsReaderMetadata{
+		Name:                      "total minute query stats",
+		projectId:                 projectId,
+		instanceId:                instanceId,
+		databaseName:              databaseName,
+		Query:                     query,
+		TimestampColumnName:       timestampColumnName,
+		QueryLabelValuesMetadata:  queryLabelValuesMetadata,
+		QueryMetricValuesMetadata: queryMetricValuesMetadata,
+	}
+}
