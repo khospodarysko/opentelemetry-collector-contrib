@@ -15,13 +15,14 @@
 package googlecloudspannerreceiver
 
 import (
-	"cloud.google.com/go/spanner"
 	"context"
 	"fmt"
+	"time"
+
+	"cloud.google.com/go/spanner"
 	"go.opentelemetry.io/collector/model/pdata"
 	"go.uber.org/zap"
 	"google.golang.org/api/iterator"
-	"time"
 )
 
 type LabelValueMetadata interface {

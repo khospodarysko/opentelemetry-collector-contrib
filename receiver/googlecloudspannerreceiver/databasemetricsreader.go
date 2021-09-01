@@ -17,9 +17,9 @@ package googlecloudspannerreceiver
 import (
 	"context"
 	"fmt"
-	"go.opentelemetry.io/collector/model/pdata"
 
 	"cloud.google.com/go/spanner"
+	"go.opentelemetry.io/collector/model/pdata"
 	"go.uber.org/zap"
 	"google.golang.org/api/option"
 )

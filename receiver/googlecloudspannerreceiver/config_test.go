@@ -91,8 +91,8 @@ func TestValidateInstance(t *testing.T) {
 	database := Database{Name: "name"}
 
 	instance := Instance{
-		ID: "id",
-		Name: "name",
+		ID:        "id",
+		Name:      "name",
 		Databases: []Database{database},
 	}
 
@@ -102,8 +102,8 @@ func TestValidateInstance(t *testing.T) {
 
 	// No id
 	instance = Instance{
-		ID: "",
-		Name: "name",
+		ID:        "",
+		Name:      "name",
 		Databases: []Database{database},
 	}
 
@@ -113,8 +113,8 @@ func TestValidateInstance(t *testing.T) {
 
 	// No name
 	instance = Instance{
-		ID: "id",
-		Name: "",
+		ID:        "id",
+		Name:      "",
 		Databases: []Database{database},
 	}
 
@@ -124,7 +124,7 @@ func TestValidateInstance(t *testing.T) {
 
 	// No databases
 	instance = Instance{
-		ID: "id",
+		ID:   "id",
 		Name: "name",
 	}
 
