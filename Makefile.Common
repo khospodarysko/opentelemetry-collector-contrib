@@ -36,7 +36,8 @@ all-srcs:
 .DEFAULT_GOAL := common
 
 .PHONY: common
-common: checklicense checkdoc impi lint misspell
+#common: checklicense checkdoc impi lint misspell
+common: checklicense checkdoc impi misspell
 
 .PHONY: test
 test:
