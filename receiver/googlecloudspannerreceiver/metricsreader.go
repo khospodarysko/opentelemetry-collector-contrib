@@ -222,6 +222,7 @@ type MetricsReaderMetadata struct {
 	instanceId          string
 	databaseName        string
 	Query               string
+	MetricNamePrefix    string
 	TimestampColumnName string
 	// In addition to common metric labels
 	QueryLabelValuesMetadata  []LabelValueMetadata
@@ -353,7 +354,7 @@ func (metadata *MetricsReaderMetadata) toMetrics(intervalEnd time.Time, labelVal
 		ilms := rm.InstrumentationLibraryMetrics()
 		ilm := ilms.AppendEmpty()
 		metric := ilm.Metrics().AppendEmpty()
-		metric.SetName(metricValue.getMetricName())
+		metric.SetName(metadata.MetricNamePrefix + metricValue.getMetricName())
 		metric.SetUnit(metricValue.getMetricUnit())
 		metric.SetDataType(metricValue.getMetricDataType())
 		gauge := metric.Gauge()
@@ -396,7 +397,6 @@ func NewTopQueryStatsMetricsReaderMetadata(
 	query := "SELECT * FROM spanner_sys.query_stats_top_minute " +
 		"WHERE interval_end = (SELECT MAX(interval_end) FROM spanner_sys.query_stats_top_minute)" +
 		"ORDER BY AVG_CPU_SECONDS DESC LIMIT 10"
-	timestampColumnName := "INTERVAL_END"
 
 	// Labels
 	queryLabelValuesMetadata := []LabelValueMetadata{
@@ -521,7 +521,8 @@ func NewTopQueryStatsMetricsReaderMetadata(
 		instanceId:                instanceId,
 		databaseName:              databaseName,
 		Query:                     query,
-		TimestampColumnName:       timestampColumnName,
+		MetricNamePrefix:          "database/spanner/query_stats/top/",
+		TimestampColumnName:       "INTERVAL_END",
 		QueryLabelValuesMetadata:  queryLabelValuesMetadata,
 		QueryMetricValuesMetadata: queryMetricValuesMetadata,
 	}
@@ -535,16 +536,15 @@ func NewTotalQueryStatsMetricsReaderMetadata(
 	query := "SELECT * FROM spanner_sys.query_stats_total_minute " +
 		"WHERE interval_end = (SELECT MAX(interval_end) FROM spanner_sys.query_stats_top_minute)" +
 		"ORDER BY INTERVAL_END DESC LIMIT 10"
-	timestampColumnName := "INTERVAL_END"
 
 	// Labels
-	queryLabelValuesMetadata := []LabelValueMetadata{}
+	var queryLabelValuesMetadata []LabelValueMetadata
 
 	// Metrics
 	queryMetricValuesMetadata := []MetricValueMetadata{
 		Int64MetricValueMetadata{
 			QueryMetricValueMetadata{
-				MetricName:       "total_minute.execution_count",
+				MetricName:       "execution_count",
 				MetricColumnName: "EXECUTION_COUNT",
 				MetricDataType:   pdata.MetricDataTypeGauge,
 				MetricUnit:       "one",
@@ -553,7 +553,7 @@ func NewTotalQueryStatsMetricsReaderMetadata(
 
 		Float64MetricValueMetadata{
 			QueryMetricValueMetadata{
-				MetricName:       "total_minute.avg_latency_seconds",
+				MetricName:       "avg_latency_seconds",
 				MetricColumnName: "AVG_LATENCY_SECONDS",
 				MetricDataType:   pdata.MetricDataTypeGauge,
 				MetricUnit:       "seconds",
@@ -562,7 +562,7 @@ func NewTotalQueryStatsMetricsReaderMetadata(
 
 		Float64MetricValueMetadata{
 			QueryMetricValueMetadata{
-				MetricName:       "total_minute.avg_rows",
+				MetricName:       "avg_rows",
 				MetricColumnName: "AVG_ROWS",
 				MetricDataType:   pdata.MetricDataTypeGauge,
 				MetricUnit:       "one",
@@ -571,7 +571,7 @@ func NewTotalQueryStatsMetricsReaderMetadata(
 
 		Float64MetricValueMetadata{
 			QueryMetricValueMetadata{
-				MetricName:       "total_minute.avg_bytes",
+				MetricName:       "avg_bytes",
 				MetricColumnName: "AVG_BYTES",
 				MetricDataType:   pdata.MetricDataTypeGauge,
 				MetricUnit:       "bytes",
@@ -580,7 +580,7 @@ func NewTotalQueryStatsMetricsReaderMetadata(
 
 		Float64MetricValueMetadata{
 			QueryMetricValueMetadata{
-				MetricName:       "total_minute.avg_rows_scanned",
+				MetricName:       "avg_rows_scanned",
 				MetricColumnName: "AVG_ROWS_SCANNED",
 				MetricDataType:   pdata.MetricDataTypeGauge,
 				MetricUnit:       "one",
@@ -589,7 +589,7 @@ func NewTotalQueryStatsMetricsReaderMetadata(
 
 		Float64MetricValueMetadata{
 			QueryMetricValueMetadata{
-				MetricName:       "total_minute.avg_cpu_seconds",
+				MetricName:       "avg_cpu_seconds",
 				MetricColumnName: "AVG_CPU_SECONDS",
 				MetricDataType:   pdata.MetricDataTypeGauge,
 				MetricUnit:       "seconds",
@@ -598,7 +598,7 @@ func NewTotalQueryStatsMetricsReaderMetadata(
 
 		Int64MetricValueMetadata{
 			QueryMetricValueMetadata{
-				MetricName:       "total_minute.all_failed_execution_count",
+				MetricName:       "all_failed_execution_count",
 				MetricColumnName: "ALL_FAILED_EXECUTION_COUNT",
 				MetricDataType:   pdata.MetricDataTypeGauge,
 				MetricUnit:       "one",
@@ -616,7 +616,7 @@ func NewTotalQueryStatsMetricsReaderMetadata(
 
 		Int64MetricValueMetadata{
 			QueryMetricValueMetadata{
-				MetricName:       "total_minute.cancelled_or_disconnected_execution_count",
+				MetricName:       "cancelled_or_disconnected_execution_count",
 				MetricColumnName: "CANCELLED_OR_DISCONNECTED_EXECUTION_COUNT",
 				MetricDataType:   pdata.MetricDataTypeGauge,
 				MetricUnit:       "one",
@@ -625,7 +625,7 @@ func NewTotalQueryStatsMetricsReaderMetadata(
 
 		Int64MetricValueMetadata{
 			QueryMetricValueMetadata{
-				MetricName:       "total_minute.timed_out_execution_count",
+				MetricName:       "timed_out_execution_count",
 				MetricColumnName: "TIMED_OUT_EXECUTION_COUNT",
 				MetricDataType:   pdata.MetricDataTypeGauge,
 				MetricUnit:       "one",
@@ -639,7 +639,8 @@ func NewTotalQueryStatsMetricsReaderMetadata(
 		instanceId:                instanceId,
 		databaseName:              databaseName,
 		Query:                     query,
-		TimestampColumnName:       timestampColumnName,
+		MetricNamePrefix:          "database/spanner/query_stats/total/",
+		TimestampColumnName:       "INTERVAL_END",
 		QueryLabelValuesMetadata:  queryLabelValuesMetadata,
 		QueryMetricValuesMetadata: queryMetricValuesMetadata,
 	}
