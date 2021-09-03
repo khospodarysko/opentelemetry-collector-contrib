@@ -16,6 +16,7 @@ package googlecloudspannerreceiver
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -23,6 +24,12 @@ import (
 	"go.opentelemetry.io/collector/model/pdata"
 	"go.uber.org/zap"
 	"google.golang.org/api/iterator"
+)
+
+const (
+	projectIdLabelName  = "project_id"
+	instanceIdLabelName = "instance_id"
+	databaseLabelName   = "database"
 )
 
 type LabelValueMetadata interface {
@@ -244,29 +251,24 @@ func (metadata *MetricsReaderMetadata) ReadMetrics(ctx context.Context, client *
 	for {
 		row, err := rowsIterator.Next()
 
-		if err == iterator.Done {
-			break
-		} else if err != nil {
-			logger.Info(fmt.Sprintf("Query %v failed with %v", metadata.Query, err))
+		if err != nil {
+			if err == iterator.Done {
+				break
+			}
+
+			logger.Error(fmt.Sprintf("Query %v failed with %v", metadata.Query, err))
+
 			return nil, err
 		}
 
-		intervalEnd, err := metadata.intervalEnd(row)
+		rowMetrics, err := metadata.rowToMetrics(row)
 
 		if err != nil {
-			logger.Error(fmt.Sprintf("Error occurred during extracting interval end %v", err))
+			logger.Error(fmt.Sprintf("Query %v failed with %v", metadata.Query, err))
 			return nil, err
 		}
 
-		logger.Info(fmt.Sprintf("Interval end = %v", intervalEnd))
-
-		// Reading labels
-		labelValues, err := metadata.toLabelValues(row)
-
-		// Reading metrics
-		metricValues, err := metadata.toMetricValues(row)
-
-		collectedMetrics = append(collectedMetrics, metadata.toMetrics(intervalEnd, labelValues, metricValues)...)
+		collectedMetrics = append(collectedMetrics, rowMetrics...)
 	}
 
 	return collectedMetrics, nil
@@ -344,10 +346,36 @@ func toMetricValue(metadata MetricValueMetadata, row *spanner.Row) (MetricValue,
 	return value, err
 }
 
-func (metadata *MetricsReaderMetadata) toMetrics(intervalEnd time.Time, labelValues []LabelValue, metricValues []MetricValue) []pdata.Metrics {
-	metrics := make([]pdata.Metrics, len(metricValues))
+func (metadata *MetricsReaderMetadata) rowToMetrics(row *spanner.Row) ([]pdata.Metrics, error) {
+	intervalEnd, err := metadata.intervalEnd(row)
 
-	for i, metricValue := range metricValues {
+	if err != nil {
+		return nil, errors.New(fmt.Sprintf("Error occurred during extracting interval end %v", err))
+	}
+
+	// Reading labels
+	labelValues, err := metadata.toLabelValues(row)
+
+	if err != nil {
+		return nil, errors.New(fmt.Sprintf("Error occurred during extracting label values for row: %v", err))
+	}
+
+	// Reading metrics
+	metricValues, err := metadata.toMetricValues(row)
+
+	if err != nil {
+		return nil, errors.New(fmt.Sprintf("Error occurred during extracting metric values row: %v", err))
+	}
+
+	return metadata.toMetrics(intervalEnd, labelValues, metricValues), nil
+}
+
+func (metadata *MetricsReaderMetadata) toMetrics(intervalEnd time.Time, labelValues []LabelValue,
+	metricValues []MetricValue) []pdata.Metrics {
+
+	var metrics []pdata.Metrics
+
+	for _, metricValue := range metricValues {
 		md := pdata.NewMetrics()
 		rms := md.ResourceMetrics()
 		rm := rms.AppendEmpty()
@@ -358,31 +386,43 @@ func (metadata *MetricsReaderMetadata) toMetrics(intervalEnd time.Time, labelVal
 		metric.SetName(metadata.MetricNamePrefix + metricValue.getMetricName())
 		metric.SetUnit(metricValue.getMetricUnit())
 		metric.SetDataType(metricValue.getMetricDataType())
-		gauge := metric.Gauge()
-		dataPoints := gauge.DataPoints()
+
+		var dataPoints pdata.NumberDataPointSlice
+
+		switch metricValue.getMetricDataType() {
+		case pdata.MetricDataTypeGauge:
+			dataPoints = metric.Gauge().DataPoints()
+		case pdata.MetricDataTypeSum:
+			dataPoints = metric.Sum().DataPoints()
+		}
+
 		dataPoint := dataPoints.AppendEmpty()
 
-		if valueCasted, ok := metricValue.(Float64MetricValue); ok {
+		switch valueCasted := metricValue.(type) {
+		case Float64MetricValue:
 			dataPoint.SetDoubleVal(valueCasted.value)
-		} else if valueCasted, ok := metricValue.(Int64MetricValue); ok {
+		case Int64MetricValue:
 			dataPoint.SetIntVal(valueCasted.value)
 		}
 
 		dataPoint.SetTimestamp(pdata.NewTimestampFromTime(intervalEnd))
 
 		for _, labelValue := range labelValues {
-			if valueCasted, ok := labelValue.(StringLabelValue); ok {
+			switch valueCasted := labelValue.(type) {
+			case StringLabelValue:
 				dataPoint.Attributes().InsertString(valueCasted.labelName, valueCasted.value)
-			} else if valueCasted, ok := labelValue.(BoolLabelValue); ok {
+			case BoolLabelValue:
 				dataPoint.Attributes().InsertBool(valueCasted.labelName, valueCasted.value)
+			case Int64LabelValue:
+				dataPoint.Attributes().InsertInt(valueCasted.labelName, valueCasted.value)
 			}
 		}
 
-		dataPoint.Attributes().InsertString("project_id", metadata.projectId)
-		dataPoint.Attributes().InsertString("instance_id", metadata.instanceId)
-		dataPoint.Attributes().InsertString("database", metadata.databaseName)
+		dataPoint.Attributes().InsertString(projectIdLabelName, metadata.projectId)
+		dataPoint.Attributes().InsertString(instanceIdLabelName, metadata.instanceId)
+		dataPoint.Attributes().InsertString(databaseLabelName, metadata.databaseName)
 
-		metrics[i] = md
+		metrics = append(metrics, md)
 	}
 
 	return metrics
