@@ -32,7 +32,7 @@ type DatabaseMetricsReader struct {
 }
 
 func NewDatabaseMetricsReader(ctx context.Context, projectId string, instanceId string, databaseName string,
-	serviceAccountPath string, logger *zap.Logger) (*DatabaseMetricsReader, error) {
+	serviceAccountPath string, topMetricsQueryMaxRows int, logger *zap.Logger) (*DatabaseMetricsReader, error) {
 	fullDatabaseName := createFullDatabaseName(projectId, instanceId, databaseName)
 	client, err := createClient(ctx, fullDatabaseName, serviceAccountPath, logger)
 
@@ -45,7 +45,7 @@ func NewDatabaseMetricsReader(ctx context.Context, projectId string, instanceId 
 		fullDatabaseName: fullDatabaseName,
 		logger:           logger,
 		metricsReaderMetadata: []*MetricsReaderMetadata{
-			NewTopQueryStatsMetricsReaderMetadata(projectId, instanceId, databaseName),
+			NewTopQueryStatsMetricsReaderMetadata(projectId, instanceId, databaseName, topMetricsQueryMaxRows),
 			NewTotalQueryStatsMetricsReaderMetadata(projectId, instanceId, databaseName),
 		},
 	}, nil

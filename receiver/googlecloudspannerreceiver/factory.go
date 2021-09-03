@@ -29,6 +29,7 @@ const (
 	typeStr = "googlecloudspannerreceiver"
 
 	defaultCollectionInterval = 10 * time.Second
+	defaultTopMetricsQueryMaxRows = 100
 )
 
 func NewFactory() component.ReceiverFactory {
@@ -44,6 +45,7 @@ func createDefaultConfig() config.Receiver {
 			ReceiverSettings:   config.NewReceiverSettings(config.NewID(typeStr)),
 			CollectionInterval: defaultCollectionInterval,
 		},
+		TopMetricsQueryMaxRows: defaultTopMetricsQueryMaxRows,
 	}
 }
 

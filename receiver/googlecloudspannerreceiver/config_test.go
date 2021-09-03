@@ -207,7 +207,8 @@ func TestValidateConfig(t *testing.T) {
 			ReceiverSettings:   config.NewReceiverSettings(config.NewID(typeStr)),
 			CollectionInterval: defaultCollectionInterval,
 		},
-		Projects: []Project{project},
+		TopMetricsQueryMaxRows: defaultTopMetricsQueryMaxRows,
+		Projects:               []Project{project},
 	}
 
 	err := cfg.Validate()
@@ -220,7 +221,22 @@ func TestValidateConfig(t *testing.T) {
 			ReceiverSettings:   config.NewReceiverSettings(config.NewID(typeStr)),
 			CollectionInterval: -1,
 		},
-		Projects: []Project{project},
+		TopMetricsQueryMaxRows: defaultTopMetricsQueryMaxRows,
+		Projects:               []Project{project},
+	}
+
+	err = cfg.Validate()
+
+	require.Error(t, err)
+
+	// Invalid top metrics query max rows
+	cfg = &Config{
+		ScraperControllerSettings: scraperhelper.ScraperControllerSettings{
+			ReceiverSettings:   config.NewReceiverSettings(config.NewID(typeStr)),
+			CollectionInterval: defaultCollectionInterval,
+		},
+		TopMetricsQueryMaxRows: -1,
+		Projects:               []Project{project},
 	}
 
 	err = cfg.Validate()
@@ -233,6 +249,7 @@ func TestValidateConfig(t *testing.T) {
 			ReceiverSettings:   config.NewReceiverSettings(config.NewID(typeStr)),
 			CollectionInterval: defaultCollectionInterval,
 		},
+		TopMetricsQueryMaxRows: defaultTopMetricsQueryMaxRows,
 	}
 
 	err = cfg.Validate()

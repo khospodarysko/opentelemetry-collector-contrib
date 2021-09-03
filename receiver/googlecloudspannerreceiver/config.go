@@ -24,7 +24,8 @@ import (
 type Config struct {
 	scraperhelper.ScraperControllerSettings `mapstructure:",squash"`
 
-	Projects []Project `mapstructure:"projects"`
+	TopMetricsQueryMaxRows int       `mapstructure:"top_metrics_query_max_rows"`
+	Projects               []Project `mapstructure:"projects"`
 }
 
 type Project struct {
@@ -45,7 +46,11 @@ type Database struct {
 
 func (config *Config) Validate() error {
 	if config.CollectionInterval <= 0 {
-		return fmt.Errorf("%v `interval` must be positive: %vms", config.ID(), config.CollectionInterval.Milliseconds())
+		return fmt.Errorf("%v `collection_interval` must be positive: %vms", config.ID(), config.CollectionInterval.Milliseconds())
+	}
+
+	if config.TopMetricsQueryMaxRows <= 0 {
+		return fmt.Errorf("%v `top_metrics_query_max_rows` must be positive: %v", config.ID(), config.TopMetricsQueryMaxRows)
 	}
 
 	if len(config.Projects) <= 0 {

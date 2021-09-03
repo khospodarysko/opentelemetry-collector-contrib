@@ -1,6 +1,7 @@
 receivers:
   googlecloudspannerreceiver:
     collection_interval: 10s
+    top_metrics_query_max_rows: 100
     projects:
       - project_id: "spanner project 1"
         service_account_key: "path to spanner project 1 service account json key"

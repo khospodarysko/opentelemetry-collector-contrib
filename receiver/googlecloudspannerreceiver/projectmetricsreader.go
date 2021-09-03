@@ -28,7 +28,7 @@ type ProjectMetricsReader struct {
 	logger                 *zap.Logger
 }
 
-func NewProjectMetricsReader(project Project, ctx context.Context, logger *zap.Logger) (*ProjectMetricsReader, error) {
+func NewProjectMetricsReader(project Project, topMetricsQueryMaxRows int, ctx context.Context, logger *zap.Logger) (*ProjectMetricsReader, error) {
 	logger.Info(fmt.Sprintf("Constructing project metrics reader for project id %v", project.ID))
 
 	databaseMetricsReaders := make(map[string]*DatabaseMetricsReader)
@@ -39,7 +39,7 @@ func NewProjectMetricsReader(project Project, ctx context.Context, logger *zap.L
 				project.ID, instance.ID, database.Name))
 
 			databaseMetricsReader, err := NewDatabaseMetricsReader(ctx, project.ID, instance.ID, database.Name,
-				project.ServiceAccountKey, logger)
+				project.ServiceAccountKey, topMetricsQueryMaxRows, logger)
 
 			if err != nil {
 				return nil, err

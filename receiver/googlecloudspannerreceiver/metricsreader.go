@@ -30,6 +30,9 @@ const (
 	projectIdLabelName  = "project_id"
 	instanceIdLabelName = "instance_id"
 	databaseLabelName   = "database"
+
+	topMetricsQueryLimitParameterName = "topMetricsQueryMaxRows"
+	topMetricsQueryLimitCondition     = " LIMIT @" + topMetricsQueryLimitParameterName
 )
 
 type LabelValueMetadata interface {
@@ -225,13 +228,14 @@ func NewFloat64MetricValue(metadata Float64MetricValueMetadata, valueHolder inte
 }
 
 type MetricsReaderMetadata struct {
-	Name                string
-	projectId           string
-	instanceId          string
-	databaseName        string
-	Query               string
-	MetricNamePrefix    string
-	TimestampColumnName string
+	Name                   string
+	projectId              string
+	instanceId             string
+	databaseName           string
+	Query                  string
+	TopMetricsQueryMaxRows int
+	MetricNamePrefix       string
+	TimestampColumnName    string
 	// In addition to common metric labels
 	QueryLabelValuesMetadata  []LabelValueMetadata
 	QueryMetricValuesMetadata []MetricValueMetadata
@@ -243,6 +247,15 @@ func (metadata *MetricsReaderMetadata) ReadMetrics(ctx context.Context, client *
 	logger.Info(fmt.Sprintf("Executing read method for metrics metadata %v", metadata.Name))
 
 	stmt := spanner.Statement{SQL: metadata.Query}
+
+	if metadata.TopMetricsQueryMaxRows > 0 {
+		stmt = spanner.Statement{
+			SQL: metadata.Query + topMetricsQueryLimitCondition,
+			Params: map[string]interface{}{
+				topMetricsQueryLimitParameterName: metadata.TopMetricsQueryMaxRows,
+			}}
+	}
+
 	rowsIterator := client.Single().Query(ctx, stmt)
 	defer rowsIterator.Stop()
 
@@ -256,7 +269,7 @@ func (metadata *MetricsReaderMetadata) ReadMetrics(ctx context.Context, client *
 				break
 			}
 
-			logger.Error(fmt.Sprintf("Query %v failed with %v", metadata.Query, err))
+			logger.Error(fmt.Sprintf("Query \"%v\" failed with %v", stmt.SQL, err))
 
 			return nil, err
 		}
@@ -264,7 +277,7 @@ func (metadata *MetricsReaderMetadata) ReadMetrics(ctx context.Context, client *
 		rowMetrics, err := metadata.rowToMetrics(row)
 
 		if err != nil {
-			logger.Error(fmt.Sprintf("Query %v failed with %v", metadata.Query, err))
+			logger.Error(fmt.Sprintf("Query \"%v\" failed with %v", stmt.SQL, err))
 			return nil, err
 		}
 
@@ -433,11 +446,12 @@ func (metadata *MetricsReaderMetadata) toMetrics(intervalEnd time.Time, labelVal
 func NewTopQueryStatsMetricsReaderMetadata(
 	projectId string,
 	instanceId string,
-	databaseName string) *MetricsReaderMetadata {
+	databaseName string,
+	topMetricsQueryMaxRows int) *MetricsReaderMetadata {
 
 	query := "SELECT * FROM spanner_sys.query_stats_top_minute " +
 		"WHERE interval_end = (SELECT MAX(interval_end) FROM spanner_sys.query_stats_top_minute)" +
-		"ORDER BY AVG_CPU_SECONDS DESC LIMIT 10"
+		"ORDER BY AVG_CPU_SECONDS DESC"
 
 	// Labels
 	queryLabelValuesMetadata := []LabelValueMetadata{
@@ -562,6 +576,7 @@ func NewTopQueryStatsMetricsReaderMetadata(
 		instanceId:                instanceId,
 		databaseName:              databaseName,
 		Query:                     query,
+		TopMetricsQueryMaxRows:    topMetricsQueryMaxRows,
 		MetricNamePrefix:          "database/spanner/query_stats/top/",
 		TimestampColumnName:       "INTERVAL_END",
 		QueryLabelValuesMetadata:  queryLabelValuesMetadata,
@@ -576,7 +591,7 @@ func NewTotalQueryStatsMetricsReaderMetadata(
 
 	query := "SELECT * FROM spanner_sys.query_stats_total_minute " +
 		"WHERE interval_end = (SELECT MAX(interval_end) FROM spanner_sys.query_stats_top_minute)" +
-		"ORDER BY INTERVAL_END DESC LIMIT 10"
+		"ORDER BY INTERVAL_END DESC"
 
 	// Labels
 	var queryLabelValuesMetadata []LabelValueMetadata

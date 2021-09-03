@@ -26,10 +26,6 @@ import (
 
 var _ component.MetricsReceiver = (*googleCloudSpannerReceiver)(nil)
 
-type metricsProvider interface {
-	GetMetrics() []pdata.Metrics
-}
-
 type googleCloudSpannerReceiver struct {
 	logger                *zap.Logger
 	nextConsumer          consumer.Metrics
@@ -86,7 +82,7 @@ func (gcsReceiver *googleCloudSpannerReceiver) initializeProjectMetricsReaders(c
 	gcsReceiver.projectMetricsReaders = make([]*ProjectMetricsReader, len(gcsReceiver.config.Projects))
 
 	for i, project := range gcsReceiver.config.Projects {
-		reader, err := NewProjectMetricsReader(project, ctx, gcsReceiver.logger)
+		reader, err := NewProjectMetricsReader(project, gcsReceiver.config.TopMetricsQueryMaxRows, ctx, gcsReceiver.logger)
 
 		if err != nil {
 			return err
