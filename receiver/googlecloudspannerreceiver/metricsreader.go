@@ -18,6 +18,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
+	"strings"
 	"time"
 
 	"cloud.google.com/go/spanner"
@@ -63,6 +65,10 @@ type BoolLabelValueMetadata struct {
 	QueryLabelValueMetadata
 }
 
+type StringSliceLabelValueMetadata struct {
+	QueryLabelValueMetadata
+}
+
 type StringLabelValue struct {
 	StringLabelValueMetadata
 	value string
@@ -76,6 +82,11 @@ type Int64LabelValue struct {
 type BoolLabelValue struct {
 	BoolLabelValueMetadata
 	value bool
+}
+
+type StringSliceLabelValue struct {
+	StringSliceLabelValueMetadata
+	value string
 }
 
 func (metadata QueryLabelValueMetadata) getLabelName() string {
@@ -134,6 +145,29 @@ func NewBoolLabelValue(metadata BoolLabelValueMetadata, valueHolder interface{})
 	return BoolLabelValue{
 		BoolLabelValueMetadata: metadata,
 		value:                  *valueHolder.(*bool),
+	}
+}
+
+func (metadata StringSliceLabelValueMetadata) valueHolder() interface{} {
+	var valueHolder []string
+
+	return &valueHolder
+}
+
+func (value StringSliceLabelValue) getValue() interface{} {
+	return value.value
+}
+
+func NewStringSliceLabelValue(metadata StringSliceLabelValueMetadata, valueHolder interface{}) StringSliceLabelValue {
+	value := *valueHolder.(*[]string)
+
+	sort.Strings(value)
+
+	sortedAndConstructedValue := strings.Join(value, ",")
+
+	return StringSliceLabelValue{
+		StringSliceLabelValueMetadata: metadata,
+		value:                         sortedAndConstructedValue,
 	}
 }
 
@@ -323,6 +357,8 @@ func toLabelValue(metadata LabelValueMetadata, row *spanner.Row) (LabelValue, er
 		value = NewInt64LabelValue(metadataCasted, valueHolder)
 	case BoolLabelValueMetadata:
 		value = NewBoolLabelValue(metadataCasted, valueHolder)
+	case StringSliceLabelValueMetadata:
+		value = NewStringSliceLabelValue(metadataCasted, valueHolder)
 	}
 
 	return value, err
@@ -428,6 +464,8 @@ func (metadata *MetricsReaderMetadata) toMetrics(intervalEnd time.Time, labelVal
 				dataPoint.Attributes().InsertBool(valueCasted.labelName, valueCasted.value)
 			case Int64LabelValue:
 				dataPoint.Attributes().InsertInt(valueCasted.labelName, valueCasted.value)
+			case StringSliceLabelValue:
+				dataPoint.Attributes().InsertString(valueCasted.labelName, valueCasted.value)
 			}
 		}
 
@@ -493,7 +531,7 @@ func NewTopQueryStatsMetricsReaderMetadata(
 				MetricName:       "avg_latency_seconds",
 				MetricColumnName: "AVG_LATENCY_SECONDS",
 				MetricDataType:   pdata.MetricDataTypeGauge,
-				MetricUnit:       "seconds",
+				MetricUnit:       "second",
 			},
 		},
 
@@ -502,7 +540,7 @@ func NewTopQueryStatsMetricsReaderMetadata(
 				MetricName:       "avg_rows",
 				MetricColumnName: "AVG_ROWS",
 				MetricDataType:   pdata.MetricDataTypeGauge,
-				MetricUnit:       "one",
+				MetricUnit:       "row",
 			},
 		},
 
@@ -511,7 +549,7 @@ func NewTopQueryStatsMetricsReaderMetadata(
 				MetricName:       "avg_bytes",
 				MetricColumnName: "AVG_BYTES",
 				MetricDataType:   pdata.MetricDataTypeGauge,
-				MetricUnit:       "bytes",
+				MetricUnit:       "byte",
 			},
 		},
 
@@ -520,7 +558,7 @@ func NewTopQueryStatsMetricsReaderMetadata(
 				MetricName:       "avg_rows_scanned",
 				MetricColumnName: "AVG_ROWS_SCANNED",
 				MetricDataType:   pdata.MetricDataTypeGauge,
-				MetricUnit:       "one",
+				MetricUnit:       "row",
 			},
 		},
 
@@ -529,7 +567,7 @@ func NewTopQueryStatsMetricsReaderMetadata(
 				MetricName:       "avg_cpu_seconds",
 				MetricColumnName: "AVG_CPU_SECONDS",
 				MetricDataType:   pdata.MetricDataTypeGauge,
-				MetricUnit:       "seconds",
+				MetricUnit:       "second",
 			},
 		},
 
@@ -547,7 +585,7 @@ func NewTopQueryStatsMetricsReaderMetadata(
 				MetricName:       "all_failed_avg_latency_seconds",
 				MetricColumnName: "ALL_FAILED_AVG_LATENCY_SECONDS",
 				MetricDataType:   pdata.MetricDataTypeGauge,
-				MetricUnit:       "seconds",
+				MetricUnit:       "second",
 			},
 		},
 
@@ -612,7 +650,7 @@ func NewTotalQueryStatsMetricsReaderMetadata(
 				MetricName:       "avg_latency_seconds",
 				MetricColumnName: "AVG_LATENCY_SECONDS",
 				MetricDataType:   pdata.MetricDataTypeGauge,
-				MetricUnit:       "seconds",
+				MetricUnit:       "second",
 			},
 		},
 
@@ -621,7 +659,7 @@ func NewTotalQueryStatsMetricsReaderMetadata(
 				MetricName:       "avg_rows",
 				MetricColumnName: "AVG_ROWS",
 				MetricDataType:   pdata.MetricDataTypeGauge,
-				MetricUnit:       "one",
+				MetricUnit:       "row",
 			},
 		},
 
@@ -630,7 +668,7 @@ func NewTotalQueryStatsMetricsReaderMetadata(
 				MetricName:       "avg_bytes",
 				MetricColumnName: "AVG_BYTES",
 				MetricDataType:   pdata.MetricDataTypeGauge,
-				MetricUnit:       "bytes",
+				MetricUnit:       "byte",
 			},
 		},
 
@@ -639,7 +677,7 @@ func NewTotalQueryStatsMetricsReaderMetadata(
 				MetricName:       "avg_rows_scanned",
 				MetricColumnName: "AVG_ROWS_SCANNED",
 				MetricDataType:   pdata.MetricDataTypeGauge,
-				MetricUnit:       "one",
+				MetricUnit:       "row",
 			},
 		},
 
@@ -648,7 +686,7 @@ func NewTotalQueryStatsMetricsReaderMetadata(
 				MetricName:       "avg_cpu_seconds",
 				MetricColumnName: "AVG_CPU_SECONDS",
 				MetricDataType:   pdata.MetricDataTypeGauge,
-				MetricUnit:       "seconds",
+				MetricUnit:       "second",
 			},
 		},
 
@@ -666,7 +704,7 @@ func NewTotalQueryStatsMetricsReaderMetadata(
 				MetricName:       "all_failed_avg_latency_seconds",
 				MetricColumnName: "ALL_FAILED_AVG_LATENCY_SECONDS",
 				MetricDataType:   pdata.MetricDataTypeGauge,
-				MetricUnit:       "seconds",
+				MetricUnit:       "second",
 			},
 		},
 
@@ -696,6 +734,113 @@ func NewTotalQueryStatsMetricsReaderMetadata(
 		databaseName:              databaseName,
 		Query:                     query,
 		MetricNamePrefix:          "database/spanner/query_stats/total/",
+		TimestampColumnName:       "INTERVAL_END",
+		QueryLabelValuesMetadata:  queryLabelValuesMetadata,
+		QueryMetricValuesMetadata: queryMetricValuesMetadata,
+	}
+}
+
+func NewTopReadStatsMetricsReaderMetadata(
+	projectId string,
+	instanceId string,
+	databaseName string,
+	topMetricsQueryMaxRows int) *MetricsReaderMetadata {
+
+	query := "SELECT * FROM spanner_sys.read_stats_top_minute " +
+		"WHERE interval_end = (SELECT MAX(interval_end) FROM spanner_sys.read_stats_top_minute)" +
+		"ORDER BY AVG_CPU_SECONDS DESC"
+
+	// Labels
+	queryLabelValuesMetadata := []LabelValueMetadata{
+		StringSliceLabelValueMetadata{
+			QueryLabelValueMetadata{
+				labelName:       "read_columns",
+				labelColumnName: "READ_COLUMNS",
+			},
+		},
+
+		Int64LabelValueMetadata{
+			QueryLabelValueMetadata{
+				labelName:       "fingerprint",
+				labelColumnName: "FPRINT",
+			},
+		},
+	}
+
+	// Metrics
+	queryMetricValuesMetadata := []MetricValueMetadata{
+		Int64MetricValueMetadata{
+			QueryMetricValueMetadata{
+				MetricName:       "execution_count",
+				MetricColumnName: "EXECUTION_COUNT",
+				MetricDataType:   pdata.MetricDataTypeGauge,
+				MetricUnit:       "one",
+			},
+		},
+
+		Float64MetricValueMetadata{
+			QueryMetricValueMetadata{
+				MetricName:       "avg_rows",
+				MetricColumnName: "AVG_ROWS",
+				MetricDataType:   pdata.MetricDataTypeGauge,
+				MetricUnit:       "row",
+			},
+		},
+
+		Float64MetricValueMetadata{
+			QueryMetricValueMetadata{
+				MetricName:       "avg_bytes",
+				MetricColumnName: "AVG_BYTES",
+				MetricDataType:   pdata.MetricDataTypeGauge,
+				MetricUnit:       "byte",
+			},
+		},
+
+		Float64MetricValueMetadata{
+			QueryMetricValueMetadata{
+				MetricName:       "avg_cpu_seconds",
+				MetricColumnName: "AVG_CPU_SECONDS",
+				MetricDataType:   pdata.MetricDataTypeGauge,
+				MetricUnit:       "second",
+			},
+		},
+
+		Float64MetricValueMetadata{
+			QueryMetricValueMetadata{
+				MetricName:       "avg_locking_delay_seconds",
+				MetricColumnName: "AVG_LOCKING_DELAY_SECONDS",
+				MetricDataType:   pdata.MetricDataTypeGauge,
+				MetricUnit:       "second",
+			},
+		},
+
+		Float64MetricValueMetadata{
+			QueryMetricValueMetadata{
+				MetricName:       "avg_client_wait_seconds",
+				MetricColumnName: "AVG_CLIENT_WAIT_SECONDS",
+				MetricDataType:   pdata.MetricDataTypeGauge,
+				MetricUnit:       "second",
+			},
+		},
+
+		Float64MetricValueMetadata{
+			QueryMetricValueMetadata{
+				MetricName:       "avg_leader_refresh_delay_seconds",
+				MetricColumnName: "AVG_LEADER_REFRESH_DELAY_SECONDS",
+				MetricDataType:   pdata.MetricDataTypeGauge,
+				MetricUnit:       "second",
+			},
+		},
+	}
+
+	return &MetricsReaderMetadata{
+		Name:                      "top minute read stats",
+		projectId:                 projectId,
+		instanceId:                instanceId,
+		databaseName:              databaseName,
+		Query:                     query,
+		TopMetricsQueryMaxRows:    topMetricsQueryMaxRows,
+		MetricNamePrefix:          "database/spanner/read_stats/top/",
 		TimestampColumnName:       "INTERVAL_END",
 		QueryLabelValuesMetadata:  queryLabelValuesMetadata,
 		QueryMetricValuesMetadata: queryMetricValuesMetadata,

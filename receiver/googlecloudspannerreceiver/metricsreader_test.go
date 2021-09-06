@@ -90,6 +90,22 @@ func TestBoolLabelValueMetadata(t *testing.T) {
 	assert.IsType(t, expectedType, metadata.valueHolder())
 }
 
+func TestStringSliceLabelValueMetadata(t *testing.T) {
+	metadata := StringSliceLabelValueMetadata{
+		QueryLabelValueMetadata{
+			labelName:       labelName,
+			labelColumnName: labelColumnName,
+		},
+	}
+
+	assert.Equal(t, labelName, metadata.getLabelName())
+	assert.Equal(t, labelColumnName, metadata.getLabelColumnName())
+
+	var expectedType *[]string
+
+	assert.IsType(t, expectedType, metadata.valueHolder())
+}
+
 func TestStringLabelValue(t *testing.T) {
 	metadata := StringLabelValueMetadata{
 		QueryLabelValueMetadata{
@@ -144,6 +160,24 @@ func TestBoolLabelValue(t *testing.T) {
 	assert.Equal(t, boolValue, labelValue.getValue())
 }
 
+func TestStringSliceLabelValue(t *testing.T) {
+	metadata := StringSliceLabelValueMetadata{
+		QueryLabelValueMetadata{
+			labelName:       labelName,
+			labelColumnName: labelColumnName,
+		},
+	}
+
+	labelValue :=
+		StringSliceLabelValue{
+			StringSliceLabelValueMetadata: metadata,
+			value:                         stringValue,
+		}
+
+	assert.Equal(t, metadata, labelValue.StringSliceLabelValueMetadata)
+	assert.Equal(t, stringValue, labelValue.getValue())
+}
+
 func TestNewStringLabelValue(t *testing.T) {
 	metadata := StringLabelValueMetadata{
 		QueryLabelValueMetadata{
@@ -193,6 +227,24 @@ func TestNewBoolLabelValue(t *testing.T) {
 
 	assert.Equal(t, metadata, labelValue.BoolLabelValueMetadata)
 	assert.Equal(t, boolValue, labelValue.getValue())
+}
+
+func TestNewStringSliceLabelValue(t *testing.T) {
+	metadata := StringSliceLabelValueMetadata{
+		QueryLabelValueMetadata{
+			labelName:       labelName,
+			labelColumnName: labelColumnName,
+		},
+	}
+
+	value := []string{"b", "a", "c"}
+	expectedValue := "a,b,c"
+	valueHolder := &value
+
+	labelValue := NewStringSliceLabelValue(metadata, valueHolder)
+
+	assert.Equal(t, metadata, labelValue.StringSliceLabelValueMetadata)
+	assert.Equal(t, expectedValue, labelValue.getValue())
 }
 
 func TestInt64MetricValueMetadata(t *testing.T) {
