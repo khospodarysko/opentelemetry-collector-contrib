@@ -947,7 +947,7 @@ func NewTotalReadStatsMetricsReaderMetadata(
 			},
 		},
 
-		Int64MetricValueMetadata{
+		Float64MetricValueMetadata{
 			QueryMetricValueMetadata{
 				MetricName:       "avg_leader_refresh_delay_seconds",
 				MetricColumnName: "AVG_LEADER_REFRESH_DELAY_SECONDS",
