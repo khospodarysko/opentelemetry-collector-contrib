@@ -628,7 +628,7 @@ func NewTotalQueryStatsMetricsReaderMetadata(
 	databaseName string) *MetricsReaderMetadata {
 
 	query := "SELECT * FROM spanner_sys.query_stats_total_minute " +
-		"WHERE interval_end = (SELECT MAX(interval_end) FROM spanner_sys.query_stats_top_minute)"
+		"WHERE interval_end = (SELECT MAX(interval_end) FROM spanner_sys.query_stats_total_minute)"
 
 	// Labels
 	var queryLabelValuesMetadata []LabelValueMetadata
@@ -931,6 +931,135 @@ func NewTotalReadStatsMetricsReaderMetadata(
 		databaseName:              databaseName,
 		Query:                     query,
 		MetricNamePrefix:          "database/spanner/read_stats/total/",
+		TimestampColumnName:       "INTERVAL_END",
+		QueryLabelValuesMetadata:  queryLabelValuesMetadata,
+		QueryMetricValuesMetadata: queryMetricValuesMetadata,
+	}
+}
+
+func NewTopTransactionStatsMetricsReaderMetadata(
+	projectId string,
+	instanceId string,
+	databaseName string,
+	topMetricsQueryMaxRows int) *MetricsReaderMetadata {
+
+	query := "SELECT * FROM spanner_sys.txn_stats_top_minute " +
+		"WHERE interval_end = (SELECT MAX(interval_end) FROM spanner_sys.txn_stats_top_minute)"
+
+	// Labels
+	queryLabelValuesMetadata := []LabelValueMetadata{
+		Int64LabelValueMetadata{
+			QueryLabelValueMetadata{
+				labelName:       "fingerprint",
+				labelColumnName: "FPRINT",
+			},
+		},
+
+		StringSliceLabelValueMetadata{
+			QueryLabelValueMetadata{
+				labelName:       "read_columns",
+				labelColumnName: "READ_COLUMNS",
+			},
+		},
+
+		StringSliceLabelValueMetadata{
+			QueryLabelValueMetadata{
+				labelName:       "write_constructive_columns",
+				labelColumnName: "WRITE_CONSTRUCTIVE_COLUMNS",
+			},
+		},
+
+		StringSliceLabelValueMetadata{
+			QueryLabelValueMetadata{
+				labelName:       "write_delete_tables",
+				labelColumnName: "WRITE_DELETE_TABLES",
+			},
+		},
+	}
+
+	// Metrics
+	queryMetricValuesMetadata := []MetricValueMetadata{
+		Int64MetricValueMetadata{
+			QueryMetricValueMetadata{
+				MetricName:       "commit_attempt_count",
+				MetricColumnName: "COMMIT_ATTEMPT_COUNT",
+				MetricDataType:   pdata.MetricDataTypeGauge,
+				MetricUnit:       "one",
+			},
+		},
+
+		Int64MetricValueMetadata{
+			QueryMetricValueMetadata{
+				MetricName:       "commit_abort_count",
+				MetricColumnName: "COMMIT_ABORT_COUNT",
+				MetricDataType:   pdata.MetricDataTypeGauge,
+				MetricUnit:       "one",
+			},
+		},
+
+		Int64MetricValueMetadata{
+			QueryMetricValueMetadata{
+				MetricName:       "commit_retry_count",
+				MetricColumnName: "COMMIT_RETRY_COUNT",
+				MetricDataType:   pdata.MetricDataTypeGauge,
+				MetricUnit:       "one",
+			},
+		},
+
+		Int64MetricValueMetadata{
+			QueryMetricValueMetadata{
+				MetricName:       "commit_failed_precondition_count",
+				MetricColumnName: "COMMIT_FAILED_PRECONDITION_COUNT",
+				MetricDataType:   pdata.MetricDataTypeGauge,
+				MetricUnit:       "one",
+			},
+		},
+
+		Float64MetricValueMetadata{
+			QueryMetricValueMetadata{
+				MetricName:       "avg_participants",
+				MetricColumnName: "AVG_PARTICIPANTS",
+				MetricDataType:   pdata.MetricDataTypeGauge,
+				MetricUnit:       "one",
+			},
+		},
+
+		Float64MetricValueMetadata{
+			QueryMetricValueMetadata{
+				MetricName:       "avg_total_latency_seconds",
+				MetricColumnName: "AVG_TOTAL_LATENCY_SECONDS",
+				MetricDataType:   pdata.MetricDataTypeGauge,
+				MetricUnit:       "second",
+			},
+		},
+
+		Float64MetricValueMetadata{
+			QueryMetricValueMetadata{
+				MetricName:       "avg_commit_latency_seconds",
+				MetricColumnName: "AVG_COMMIT_LATENCY_SECONDS",
+				MetricDataType:   pdata.MetricDataTypeGauge,
+				MetricUnit:       "second",
+			},
+		},
+
+		Float64MetricValueMetadata{
+			QueryMetricValueMetadata{
+				MetricName:       "avg_bytes",
+				MetricColumnName: "AVG_BYTES",
+				MetricDataType:   pdata.MetricDataTypeGauge,
+				MetricUnit:       "byte",
+			},
+		},
+	}
+
+	return &MetricsReaderMetadata{
+		Name:                      "top minute transaction stats",
+		projectId:                 projectId,
+		instanceId:                instanceId,
+		databaseName:              databaseName,
+		Query:                     query,
+		TopMetricsQueryMaxRows:    topMetricsQueryMaxRows,
+		MetricNamePrefix:          "database/spanner/txn_stats/top/",
 		TimestampColumnName:       "INTERVAL_END",
 		QueryLabelValuesMetadata:  queryLabelValuesMetadata,
 		QueryMetricValuesMetadata: queryMetricValuesMetadata,
