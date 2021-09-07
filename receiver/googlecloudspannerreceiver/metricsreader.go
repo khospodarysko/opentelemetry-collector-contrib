@@ -628,8 +628,7 @@ func NewTotalQueryStatsMetricsReaderMetadata(
 	databaseName string) *MetricsReaderMetadata {
 
 	query := "SELECT * FROM spanner_sys.query_stats_total_minute " +
-		"WHERE interval_end = (SELECT MAX(interval_end) FROM spanner_sys.query_stats_top_minute)" +
-		"ORDER BY INTERVAL_END DESC"
+		"WHERE interval_end = (SELECT MAX(interval_end) FROM spanner_sys.query_stats_top_minute)"
 
 	// Labels
 	var queryLabelValuesMetadata []LabelValueMetadata
@@ -853,8 +852,7 @@ func NewTotalReadStatsMetricsReaderMetadata(
 	databaseName string) *MetricsReaderMetadata {
 
 	query := "SELECT * FROM spanner_sys.read_stats_total_minute " +
-		"WHERE interval_end = (SELECT MAX(interval_end) FROM spanner_sys.read_stats_total_minute)" +
-		"ORDER BY INTERVAL_END DESC"
+		"WHERE interval_end = (SELECT MAX(interval_end) FROM spanner_sys.read_stats_total_minute)"
 
 	// Labels
 	var queryLabelValuesMetadata []LabelValueMetadata
