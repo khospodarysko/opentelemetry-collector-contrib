@@ -628,8 +628,7 @@ func NewTotalQueryStatsMetricsReaderMetadata(
 	databaseName string) *MetricsReaderMetadata {
 
 	query := "SELECT * FROM spanner_sys.query_stats_total_minute " +
-		"WHERE interval_end = (SELECT MAX(interval_end) FROM spanner_sys.query_stats_total_minute)" +
-		"ORDER BY INTERVAL_END DESC"
+		"WHERE interval_end = (SELECT MAX(interval_end) FROM spanner_sys.query_stats_total_minute)"
 
 	// Labels
 	var queryLabelValuesMetadata []LabelValueMetadata
@@ -841,6 +840,97 @@ func NewTopReadStatsMetricsReaderMetadata(
 		Query:                     query,
 		TopMetricsQueryMaxRows:    topMetricsQueryMaxRows,
 		MetricNamePrefix:          "database/spanner/read_stats/top/",
+		TimestampColumnName:       "INTERVAL_END",
+		QueryLabelValuesMetadata:  queryLabelValuesMetadata,
+		QueryMetricValuesMetadata: queryMetricValuesMetadata,
+	}
+}
+
+func NewTotalReadStatsMetricsReaderMetadata(
+	projectId string,
+	instanceId string,
+	databaseName string) *MetricsReaderMetadata {
+
+	query := "SELECT * FROM spanner_sys.read_stats_total_minute " +
+		"WHERE interval_end = (SELECT MAX(interval_end) FROM spanner_sys.read_stats_total_minute)"
+
+	// Labels
+	var queryLabelValuesMetadata []LabelValueMetadata
+
+	// Metrics
+	queryMetricValuesMetadata := []MetricValueMetadata{
+		Int64MetricValueMetadata{
+			QueryMetricValueMetadata{
+				MetricName:       "execution_count",
+				MetricColumnName: "EXECUTION_COUNT",
+				MetricDataType:   pdata.MetricDataTypeGauge,
+				MetricUnit:       "one",
+			},
+		},
+
+		Float64MetricValueMetadata{
+			QueryMetricValueMetadata{
+				MetricName:       "avg_rows",
+				MetricColumnName: "AVG_ROWS",
+				MetricDataType:   pdata.MetricDataTypeGauge,
+				MetricUnit:       "row",
+			},
+		},
+
+		Float64MetricValueMetadata{
+			QueryMetricValueMetadata{
+				MetricName:       "avg_bytes",
+				MetricColumnName: "AVG_BYTES",
+				MetricDataType:   pdata.MetricDataTypeGauge,
+				MetricUnit:       "byte",
+			},
+		},
+
+		Float64MetricValueMetadata{
+			QueryMetricValueMetadata{
+				MetricName:       "avg_cpu_seconds",
+				MetricColumnName: "AVG_CPU_SECONDS",
+				MetricDataType:   pdata.MetricDataTypeGauge,
+				MetricUnit:       "second",
+			},
+		},
+
+		Float64MetricValueMetadata{
+			QueryMetricValueMetadata{
+				MetricName:       "avg_locking_delay_seconds",
+				MetricColumnName: "AVG_LOCKING_DELAY_SECONDS",
+				MetricDataType:   pdata.MetricDataTypeGauge,
+				MetricUnit:       "second",
+			},
+		},
+
+		Float64MetricValueMetadata{
+			QueryMetricValueMetadata{
+				MetricName:       "avg_client_wait_seconds",
+				MetricColumnName: "AVG_CLIENT_WAIT_SECONDS",
+				MetricDataType:   pdata.MetricDataTypeGauge,
+				MetricUnit:       "second",
+			},
+		},
+
+		Int64MetricValueMetadata{
+			QueryMetricValueMetadata{
+				MetricName:       "avg_leader_refresh_delay_seconds",
+				MetricColumnName: "AVG_LEADER_REFRESH_DELAY_SECONDS",
+				MetricDataType:   pdata.MetricDataTypeGauge,
+				MetricUnit:       "second",
+			},
+		},
+
+	}
+
+	return &MetricsReaderMetadata{
+		Name:                      "total minute read stats",
+		projectId:                 projectId,
+		instanceId:                instanceId,
+		databaseName:              databaseName,
+		Query:                     query,
+		MetricNamePrefix:          "database/spanner/read_stats/total/",
 		TimestampColumnName:       "INTERVAL_END",
 		QueryLabelValuesMetadata:  queryLabelValuesMetadata,
 		QueryMetricValuesMetadata: queryMetricValuesMetadata,
