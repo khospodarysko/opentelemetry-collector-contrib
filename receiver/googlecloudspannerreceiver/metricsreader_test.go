@@ -416,6 +416,19 @@ func TestNewFloat64MetricValue(t *testing.T) {
 	assert.Equal(t, float64Value, metricValue.getValue())
 }
 
+func TestMetricsReaderMetadata_FullName(t *testing.T) {
+
+	metricsReaderMetadata := MetricsReaderMetadata{
+		Name:         "name",
+		projectId:    "projectId",
+		instanceId:   "instanceId",
+		databaseName: "databaseName",
+	}
+
+	assert.Equal(t, metricsReaderMetadata.Name+" "+metricsReaderMetadata.projectId+"::"+
+		metricsReaderMetadata.instanceId+"::"+metricsReaderMetadata.databaseName, (&metricsReaderMetadata).FullName())
+}
+
 func TestMetricsReaderMetadata_IntervalEnd(t *testing.T) {
 	timestamp := time.Now().UTC()
 	metadata := &MetricsReaderMetadata{

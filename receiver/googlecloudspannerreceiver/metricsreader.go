@@ -303,8 +303,12 @@ type MetricsReaderMetadata struct {
 
 /* ------------------------------------------------------------------------------------------------------------------ */
 
+func (metadata *MetricsReaderMetadata) FullName() string {
+	return metadata.Name + " " + metadata.projectId + "::" + metadata.instanceId + "::" + metadata.databaseName
+}
+
 func (metadata *MetricsReaderMetadata) ReadMetrics(ctx context.Context, client *spanner.Client, logger *zap.Logger) ([]pdata.Metrics, error) {
-	logger.Info(fmt.Sprintf("Executing read method for metrics metadata %v", metadata.Name))
+	logger.Info(fmt.Sprintf("Executing read method for metrics metadata %v", metadata.FullName()))
 
 	stmt := spanner.Statement{SQL: metadata.Query}
 
@@ -951,7 +955,6 @@ func NewTotalReadStatsMetricsReaderMetadata(
 				MetricUnit:       "second",
 			},
 		},
-
 	}
 
 	return &MetricsReaderMetadata{
@@ -1143,3 +1146,38 @@ func NewTopLockStatsMetricsReaderMetadata(
 	}
 }
 
+func NewTotalLockStatsMetricsReaderMetadata(
+	projectId string,
+	instanceId string,
+	databaseName string) *MetricsReaderMetadata {
+
+	query := "SELECT * FROM spanner_sys.lock_stats_total_minute " +
+		"WHERE interval_end = (SELECT MAX(interval_end) FROM spanner_sys.lock_stats_total_minute)"
+
+	// Labels
+	var queryLabelValuesMetadata []LabelValueMetadata
+
+	// Metrics
+	queryMetricValuesMetadata := []MetricValueMetadata{
+		Float64MetricValueMetadata{
+			QueryMetricValueMetadata{
+				MetricName:       "total_lock_wait_seconds",
+				MetricColumnName: "TOTAL_LOCK_WAIT_SECONDS",
+				MetricDataType:   pdata.MetricDataTypeGauge,
+				MetricUnit:       "second",
+			},
+		},
+	}
+
+	return &MetricsReaderMetadata{
+		Name:                      "total minute lock stats",
+		projectId:                 projectId,
+		instanceId:                instanceId,
+		databaseName:              databaseName,
+		Query:                     query,
+		MetricNamePrefix:          "database/spanner/lock_stats/total/",
+		TimestampColumnName:       "INTERVAL_END",
+		QueryLabelValuesMetadata:  queryLabelValuesMetadata,
+		QueryMetricValuesMetadata: queryMetricValuesMetadata,
+	}
+}
