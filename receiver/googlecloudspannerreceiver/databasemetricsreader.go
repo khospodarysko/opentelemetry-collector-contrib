@@ -51,6 +51,7 @@ func NewDatabaseMetricsReader(ctx context.Context, projectId string, instanceId 
 			NewTotalReadStatsMetricsReaderMetadata(projectId, instanceId, databaseName),
 			NewTopTransactionStatsMetricsReaderMetadata(projectId, instanceId, databaseName, topMetricsQueryMaxRows),
 			NewTopLockStatsMetricsReaderMetadata(projectId, instanceId, databaseName, topMetricsQueryMaxRows),
+			NewTotalLockStatsMetricsReaderMetadata(projectId, instanceId, databaseName),
 		},
 	}, nil
 }
