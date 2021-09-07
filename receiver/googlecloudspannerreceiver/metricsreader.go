@@ -69,6 +69,10 @@ type StringSliceLabelValueMetadata struct {
 	QueryLabelValueMetadata
 }
 
+type ByteSliceLabelValueMetadata struct {
+	QueryLabelValueMetadata
+}
+
 type StringLabelValue struct {
 	StringLabelValueMetadata
 	value string
@@ -86,6 +90,11 @@ type BoolLabelValue struct {
 
 type StringSliceLabelValue struct {
 	StringSliceLabelValueMetadata
+	value string
+}
+
+type ByteSliceLabelValue struct {
+	ByteSliceLabelValueMetadata
 	value string
 }
 
@@ -168,6 +177,23 @@ func NewStringSliceLabelValue(metadata StringSliceLabelValueMetadata, valueHolde
 	return StringSliceLabelValue{
 		StringSliceLabelValueMetadata: metadata,
 		value:                         sortedAndConstructedValue,
+	}
+}
+
+func (metadata ByteSliceLabelValueMetadata) valueHolder() interface{} {
+	var valueHolder []byte
+
+	return &valueHolder
+}
+
+func (value ByteSliceLabelValue) getValue() interface{} {
+	return value.value
+}
+
+func NewByteSliceLabelValue(metadata ByteSliceLabelValueMetadata, valueHolder interface{}) ByteSliceLabelValue {
+	return ByteSliceLabelValue{
+		ByteSliceLabelValueMetadata: metadata,
+		value:                       string(*valueHolder.(*[]byte)),
 	}
 }
 
@@ -359,6 +385,8 @@ func toLabelValue(metadata LabelValueMetadata, row *spanner.Row) (LabelValue, er
 		value = NewBoolLabelValue(metadataCasted, valueHolder)
 	case StringSliceLabelValueMetadata:
 		value = NewStringSliceLabelValue(metadataCasted, valueHolder)
+	case ByteSliceLabelValueMetadata:
+		value = NewByteSliceLabelValue(metadataCasted, valueHolder)
 	}
 
 	return value, err
@@ -466,6 +494,8 @@ func (metadata *MetricsReaderMetadata) toMetrics(intervalEnd time.Time, labelVal
 				dataPoint.Attributes().InsertInt(valueCasted.labelName, valueCasted.value)
 			case StringSliceLabelValue:
 				dataPoint.Attributes().InsertString(valueCasted.labelName, valueCasted.value)
+			case ByteSliceLabelValue:
+				dataPoint.Attributes().InsertString(valueCasted.labelName, valueCasted.value)
 			}
 		}
 
@@ -489,7 +519,7 @@ func NewTopQueryStatsMetricsReaderMetadata(
 
 	query := "SELECT * FROM spanner_sys.query_stats_top_minute " +
 		"WHERE interval_end = (SELECT MAX(interval_end) FROM spanner_sys.query_stats_top_minute)" +
-		"ORDER BY AVG_CPU_SECONDS DESC"
+		"ORDER BY EXECUTION_COUNT * AVG_CPU_SECONDS DESC"
 
 	// Labels
 	queryLabelValuesMetadata := []LabelValueMetadata{
@@ -747,7 +777,7 @@ func NewTopReadStatsMetricsReaderMetadata(
 
 	query := "SELECT * FROM spanner_sys.read_stats_top_minute " +
 		"WHERE interval_end = (SELECT MAX(interval_end) FROM spanner_sys.read_stats_top_minute)" +
-		"ORDER BY AVG_CPU_SECONDS DESC"
+		"ORDER BY EXECUTION_COUNT * AVG_CPU_SECONDS DESC"
 
 	// Labels
 	queryLabelValuesMetadata := []LabelValueMetadata{
@@ -944,7 +974,8 @@ func NewTopTransactionStatsMetricsReaderMetadata(
 	topMetricsQueryMaxRows int) *MetricsReaderMetadata {
 
 	query := "SELECT * FROM spanner_sys.txn_stats_top_minute " +
-		"WHERE interval_end = (SELECT MAX(interval_end) FROM spanner_sys.txn_stats_top_minute)"
+		"WHERE interval_end = (SELECT MAX(interval_end) FROM spanner_sys.txn_stats_top_minute)" +
+		"ORDER BY AVG_COMMIT_LATENCY_SECONDS DESC, COMMIT_ATTEMPT_COUNT DESC, AVG_BYTES DESC"
 
 	// Labels
 	queryLabelValuesMetadata := []LabelValueMetadata{
@@ -1065,3 +1096,50 @@ func NewTopTransactionStatsMetricsReaderMetadata(
 		QueryMetricValuesMetadata: queryMetricValuesMetadata,
 	}
 }
+
+func NewTopLockStatsMetricsReaderMetadata(
+	projectId string,
+	instanceId string,
+	databaseName string,
+	topMetricsQueryMaxRows int) *MetricsReaderMetadata {
+
+	query := "SELECT * FROM spanner_sys.lock_stats_top_minute " +
+		"WHERE interval_end = (SELECT MAX(interval_end) FROM spanner_sys.lock_stats_top_minute)" +
+		"ORDER BY LOCK_WAIT_SECONDS DESC"
+
+	// Labels
+	queryLabelValuesMetadata := []LabelValueMetadata{
+		ByteSliceLabelValueMetadata{
+			QueryLabelValueMetadata{
+				labelName:       "row_range_start_key",
+				labelColumnName: "ROW_RANGE_START_KEY",
+			},
+		},
+	}
+
+	// Metrics
+	queryMetricValuesMetadata := []MetricValueMetadata{
+		Float64MetricValueMetadata{
+			QueryMetricValueMetadata{
+				MetricName:       "lock_wait_seconds",
+				MetricColumnName: "LOCK_WAIT_SECONDS",
+				MetricDataType:   pdata.MetricDataTypeGauge,
+				MetricUnit:       "second",
+			},
+		},
+	}
+
+	return &MetricsReaderMetadata{
+		Name:                      "top minute lock stats",
+		projectId:                 projectId,
+		instanceId:                instanceId,
+		databaseName:              databaseName,
+		Query:                     query,
+		TopMetricsQueryMaxRows:    topMetricsQueryMaxRows,
+		MetricNamePrefix:          "database/spanner/lock_stats/top/",
+		TimestampColumnName:       "INTERVAL_END",
+		QueryLabelValuesMetadata:  queryLabelValuesMetadata,
+		QueryMetricValuesMetadata: queryMetricValuesMetadata,
+	}
+}
+

@@ -106,6 +106,22 @@ func TestStringSliceLabelValueMetadata(t *testing.T) {
 	assert.IsType(t, expectedType, metadata.valueHolder())
 }
 
+func TestByteSliceLabelValueMetadata(t *testing.T) {
+	metadata := ByteSliceLabelValueMetadata{
+		QueryLabelValueMetadata{
+			labelName:       labelName,
+			labelColumnName: labelColumnName,
+		},
+	}
+
+	assert.Equal(t, labelName, metadata.getLabelName())
+	assert.Equal(t, labelColumnName, metadata.getLabelColumnName())
+
+	var expectedType *[]byte
+
+	assert.IsType(t, expectedType, metadata.valueHolder())
+}
+
 func TestStringLabelValue(t *testing.T) {
 	metadata := StringLabelValueMetadata{
 		QueryLabelValueMetadata{
@@ -178,6 +194,24 @@ func TestStringSliceLabelValue(t *testing.T) {
 	assert.Equal(t, stringValue, labelValue.getValue())
 }
 
+func TestByteSliceLabelValue(t *testing.T) {
+	metadata := ByteSliceLabelValueMetadata{
+		QueryLabelValueMetadata{
+			labelName:       labelName,
+			labelColumnName: labelColumnName,
+		},
+	}
+
+	labelValue :=
+		ByteSliceLabelValue{
+			ByteSliceLabelValueMetadata: metadata,
+			value:                       stringValue,
+		}
+
+	assert.Equal(t, metadata, labelValue.ByteSliceLabelValueMetadata)
+	assert.Equal(t, stringValue, labelValue.getValue())
+}
+
 func TestNewStringLabelValue(t *testing.T) {
 	metadata := StringLabelValueMetadata{
 		QueryLabelValueMetadata{
@@ -245,6 +279,23 @@ func TestNewStringSliceLabelValue(t *testing.T) {
 
 	assert.Equal(t, metadata, labelValue.StringSliceLabelValueMetadata)
 	assert.Equal(t, expectedValue, labelValue.getValue())
+}
+
+func TestNewByteSliceLabelValue(t *testing.T) {
+	metadata := ByteSliceLabelValueMetadata{
+		QueryLabelValueMetadata{
+			labelName:       labelName,
+			labelColumnName: labelColumnName,
+		},
+	}
+
+	value := []byte(stringValue)
+	valueHolder := &value
+
+	labelValue := NewByteSliceLabelValue(metadata, valueHolder)
+
+	assert.Equal(t, metadata, labelValue.ByteSliceLabelValueMetadata)
+	assert.Equal(t, stringValue, labelValue.getValue())
 }
 
 func TestInt64MetricValueMetadata(t *testing.T) {
@@ -440,6 +491,40 @@ func TestToLabelValue_BoolLabelValueMetadata(t *testing.T) {
 	assert.Equal(t, boolValue, labelValue.getValue())
 }
 
+func TestToLabelValue_StringSliceLabelValueMetadata(t *testing.T) {
+	labelValueMetadata := StringSliceLabelValueMetadata{
+		QueryLabelValueMetadata{
+			labelName:       labelName,
+			labelColumnName: labelColumnName,
+		},
+	}
+
+	row, _ := spanner.NewRow([]string{labelColumnName}, []interface{}{[]string{stringValue, stringValue}})
+	labelValue, _ := toLabelValue(labelValueMetadata, row)
+
+	assert.IsType(t, StringSliceLabelValue{}, labelValue)
+	assert.Equal(t, labelName, labelValue.getLabelName())
+	assert.Equal(t, labelColumnName, labelValue.getLabelColumnName())
+	assert.Equal(t, stringValue+","+stringValue, labelValue.getValue())
+}
+
+func TestToLabelValue_ByteSliceLabelValueMetadata(t *testing.T) {
+	labelValueMetadata := ByteSliceLabelValueMetadata{
+		QueryLabelValueMetadata{
+			labelName:       labelName,
+			labelColumnName: labelColumnName,
+		},
+	}
+
+	row, _ := spanner.NewRow([]string{labelColumnName}, []interface{}{[]byte(stringValue)})
+	labelValue, _ := toLabelValue(labelValueMetadata, row)
+
+	assert.IsType(t, ByteSliceLabelValue{}, labelValue)
+	assert.Equal(t, labelName, labelValue.getLabelName())
+	assert.Equal(t, labelColumnName, labelValue.getLabelColumnName())
+	assert.Equal(t, stringValue, labelValue.getValue())
+}
+
 func TestMetricsReaderMetadata_ToLabelValues_AllPossibleMetadata(t *testing.T) {
 	stringLabelValueMetadata := StringLabelValueMetadata{
 		QueryLabelValueMetadata{
@@ -462,10 +547,26 @@ func TestMetricsReaderMetadata_ToLabelValues_AllPossibleMetadata(t *testing.T) {
 		},
 	}
 
+	stringSliceLabelValueMetadata := StringSliceLabelValueMetadata{
+		QueryLabelValueMetadata{
+			labelName:       "stringSliceLabelName",
+			labelColumnName: "stringSliceLabelColumnName",
+		},
+	}
+
+	byteSliceLabelValueMetadata := ByteSliceLabelValueMetadata{
+		QueryLabelValueMetadata{
+			labelName:       "byteSliceLabelName",
+			labelColumnName: "byteSliceLabelColumnName",
+		},
+	}
+
 	queryLabelValuesMetadata := []LabelValueMetadata{
 		stringLabelValueMetadata,
 		boolLabelValueMetadata,
 		int64LabelValueMetadata,
+		stringSliceLabelValueMetadata,
+		byteSliceLabelValueMetadata,
 	}
 
 	metricsReaderMetadata := MetricsReaderMetadata{
@@ -476,17 +577,29 @@ func TestMetricsReaderMetadata_ToLabelValues_AllPossibleMetadata(t *testing.T) {
 		[]string{
 			stringLabelValueMetadata.labelColumnName,
 			boolLabelValueMetadata.labelColumnName,
-			int64LabelValueMetadata.labelColumnName},
+			int64LabelValueMetadata.labelColumnName,
+			stringSliceLabelValueMetadata.labelColumnName,
+			byteSliceLabelValueMetadata.labelColumnName,
+		},
 		[]interface{}{
 			stringValue,
 			boolValue,
-			int64Value})
+			int64Value,
+			[]string{stringValue, stringValue},
+			[]byte(stringValue),
+		})
 
 	labelValues, _ := metricsReaderMetadata.toLabelValues(row)
 
 	assert.Equal(t, len(queryLabelValuesMetadata), len(labelValues))
 
-	expectedTypes := []LabelValue{StringLabelValue{}, BoolLabelValue{}, Int64LabelValue{}}
+	expectedTypes := []LabelValue{
+		StringLabelValue{},
+		BoolLabelValue{},
+		Int64LabelValue{},
+		StringSliceLabelValue{},
+		ByteSliceLabelValue{},
+	}
 
 	for i, expectedType := range expectedTypes {
 		assert.IsType(t, expectedType, labelValues[i])
@@ -701,10 +814,32 @@ func testMetricsReaderMetadataToMetricsWithSpecificMetricDataType(t *testing.T, 
 		value: int64Value,
 	}
 
+	stringSliceLabelValue := StringSliceLabelValue{
+		StringSliceLabelValueMetadata: StringSliceLabelValueMetadata{
+			QueryLabelValueMetadata{
+				labelName:       "stringSliceLabelName",
+				labelColumnName: "stringSliceLabelColumnName",
+			},
+		},
+		value: stringValue,
+	}
+
+	byteSliceLabelValue := ByteSliceLabelValue{
+		ByteSliceLabelValueMetadata: ByteSliceLabelValueMetadata{
+			QueryLabelValueMetadata{
+				labelName:       "byteSliceLabelName",
+				labelColumnName: "byteSliceLabelColumnName",
+			},
+		},
+		value: stringValue,
+	}
+
 	labelValues := []LabelValue{
 		stringLabelValue,
 		boolLabelValue,
 		int64LabelValue,
+		stringSliceLabelValue,
+		byteSliceLabelValue,
 	}
 
 	metricValues := []MetricValue{
@@ -810,6 +945,16 @@ func testMetricsReaderMetadataToMetricsWithSpecificMetricDataType(t *testing.T, 
 
 		assert.True(t, exists)
 		assert.Equal(t, int64LabelValue.getValue(), value.IntVal())
+
+		value, exists = attributesMap.Get(stringSliceLabelValue.getLabelName())
+
+		assert.True(t, exists)
+		assert.Equal(t, stringSliceLabelValue.getValue(), value.StringVal())
+
+		value, exists = attributesMap.Get(byteSliceLabelValue.getLabelName())
+
+		assert.True(t, exists)
+		assert.Equal(t, byteSliceLabelValue.getValue(), value.StringVal())
 	}
 }
 
