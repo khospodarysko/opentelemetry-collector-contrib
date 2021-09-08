@@ -353,8 +353,13 @@ func (metadata *MetricsReaderMetadata) ReadMetrics(ctx context.Context, client *
 
 func (metadata *MetricsReaderMetadata) intervalEnd(row *spanner.Row) (time.Time, error) {
 	var intervalEnd time.Time
+	var err error
 
-	err := row.ColumnByName(metadata.TimestampColumnName, &intervalEnd)
+	if metadata.TimestampColumnName != "" {
+		err = row.ColumnByName(metadata.TimestampColumnName, &intervalEnd)
+	} else {
+		intervalEnd = time.Now().UTC()
+	}
 
 	return intervalEnd, err
 }
@@ -1276,6 +1281,67 @@ func NewTotalLockStatsMetricsReaderMetadata(
 		Query:                     query,
 		MetricNamePrefix:          "database/spanner/lock_stats/total/",
 		TimestampColumnName:       "INTERVAL_END",
+		QueryLabelValuesMetadata:  queryLabelValuesMetadata,
+		QueryMetricValuesMetadata: queryMetricValuesMetadata,
+	}
+}
+
+func NewActiveQueriesSummaryMetricsReaderMetadata(
+	projectId string,
+	instanceId string,
+	databaseName string) *MetricsReaderMetadata {
+
+	query := "select * from spanner_sys.active_queries_summary;"
+
+	// Labels
+	var queryLabelValuesMetadata []LabelValueMetadata
+
+	// Metrics
+	queryMetricValuesMetadata := []MetricValueMetadata{
+		Int64MetricValueMetadata{
+			QueryMetricValueMetadata{
+				MetricName:       "active_count",
+				MetricColumnName: "ACTIVE_COUNT",
+				MetricDataType:   pdata.MetricDataTypeGauge,
+				MetricUnit:       "one",
+			},
+		},
+
+		Int64MetricValueMetadata{
+			QueryMetricValueMetadata{
+				MetricName:       "count_older_than_1s",
+				MetricColumnName: "COUNT_OLDER_THAN_1S",
+				MetricDataType:   pdata.MetricDataTypeGauge,
+				MetricUnit:       "one",
+			},
+		},
+
+		Int64MetricValueMetadata{
+			QueryMetricValueMetadata{
+				MetricName:       "count_older_than_10s",
+				MetricColumnName: "COUNT_OLDER_THAN_10S",
+				MetricDataType:   pdata.MetricDataTypeGauge,
+				MetricUnit:       "one",
+			},
+		},
+
+		Int64MetricValueMetadata{
+			QueryMetricValueMetadata{
+				MetricName:       "count_older_than_100s",
+				MetricColumnName: "COUNT_OLDER_THAN_100S",
+				MetricDataType:   pdata.MetricDataTypeGauge,
+				MetricUnit:       "one",
+			},
+		},
+	}
+
+	return &MetricsReaderMetadata{
+		Name:                      "active queries summary",
+		projectId:                 projectId,
+		instanceId:                instanceId,
+		databaseName:              databaseName,
+		Query:                     query,
+		MetricNamePrefix:          "database/spanner/active_queries_summary/",
 		QueryLabelValuesMetadata:  queryLabelValuesMetadata,
 		QueryMetricValuesMetadata: queryMetricValuesMetadata,
 	}
