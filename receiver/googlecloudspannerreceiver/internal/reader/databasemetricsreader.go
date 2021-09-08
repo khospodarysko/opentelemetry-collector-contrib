@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package googlecloudspannerreceiver
+package reader
 
 import (
 	"context"
@@ -25,14 +25,20 @@ import (
 )
 
 type DatabaseMetricsReader struct {
-	client                *spanner.Client
-	fullDatabaseName      string
-	logger                *zap.Logger
-	metricsReaderMetadata []*MetricsReaderMetadata
+	client           *spanner.Client
+	fullDatabaseName string
+	logger           *zap.Logger
+	metricsReaders   []*MetricsReader
 }
 
-func NewDatabaseMetricsReader(ctx context.Context, projectId string, instanceId string, databaseName string,
-	serviceAccountPath string, topMetricsQueryMaxRows int, logger *zap.Logger) (*DatabaseMetricsReader, error) {
+func NewDatabaseMetricsReader(ctx context.Context,
+	projectId string,
+	instanceId string,
+	databaseName string,
+	serviceAccountPath string,
+	topMetricsQueryMaxRows int,
+	logger *zap.Logger) (*DatabaseMetricsReader, error) {
+
 	fullDatabaseName := createFullDatabaseName(projectId, instanceId, databaseName)
 	client, err := createClient(ctx, fullDatabaseName, serviceAccountPath, logger)
 
@@ -44,23 +50,23 @@ func NewDatabaseMetricsReader(ctx context.Context, projectId string, instanceId 
 		client:           client,
 		fullDatabaseName: fullDatabaseName,
 		logger:           logger,
-		metricsReaderMetadata: []*MetricsReaderMetadata{
-			NewTopQueryStatsMetricsReaderMetadata(projectId, instanceId, databaseName, topMetricsQueryMaxRows),
-			NewTotalQueryStatsMetricsReaderMetadata(projectId, instanceId, databaseName),
-			NewTopReadStatsMetricsReaderMetadata(projectId, instanceId, databaseName, topMetricsQueryMaxRows),
-			NewTotalReadStatsMetricsReaderMetadata(projectId, instanceId, databaseName),
-			NewTopTransactionStatsMetricsReaderMetadata(projectId, instanceId, databaseName, topMetricsQueryMaxRows),
-			NewTotalTransactionStatsMetricsReaderMetadata(projectId, instanceId, databaseName),
-			NewTopLockStatsMetricsReaderMetadata(projectId, instanceId, databaseName, topMetricsQueryMaxRows),
-			NewTotalLockStatsMetricsReaderMetadata(projectId, instanceId, databaseName),
-			NewActiveQueriesSummaryMetricsReaderMetadata(projectId, instanceId, databaseName),
+		metricsReaders: []*MetricsReader{
+			NewTopQueryStatsMetricsReader(projectId, instanceId, databaseName, topMetricsQueryMaxRows),
+			NewTotalQueryStatsMetricsReader(projectId, instanceId, databaseName),
+			NewTopReadStatsMetricsReader(projectId, instanceId, databaseName, topMetricsQueryMaxRows),
+			NewTotalReadStatsMetricsReader(projectId, instanceId, databaseName),
+			NewTopTransactionStatsMetricsReader(projectId, instanceId, databaseName, topMetricsQueryMaxRows),
+			NewTotalTransactionStatsMetricsReader(projectId, instanceId, databaseName),
+			NewTopLockStatsMetricsReader(projectId, instanceId, databaseName, topMetricsQueryMaxRows),
+			NewTotalLockStatsMetricsReader(projectId, instanceId, databaseName),
+			NewActiveQueriesSummaryMetricsReader(projectId, instanceId, databaseName),
 		},
 	}, nil
 }
 
 func createClient(ctx context.Context, database string, serviceAccountPath string, logger *zap.Logger) (*spanner.Client, error) {
-	serviceAccountClientOption := option.WithCredentialsFile(serviceAccountPath)
-	client, err := spanner.NewClient(ctx, database, serviceAccountClientOption)
+	credentialsFileClientOption := option.WithCredentialsFile(serviceAccountPath)
+	client, err := spanner.NewClient(ctx, database, credentialsFileClientOption)
 
 	if err != nil {
 		logger.Error(fmt.Sprintf("Error occurred during client instantiation for database %v", database))
@@ -84,11 +90,12 @@ func (reader *DatabaseMetricsReader) ReadMetrics(ctx context.Context) []pdata.Me
 
 	var result []pdata.Metrics
 
-	for _, metadata := range reader.metricsReaderMetadata {
-		metrics, err := metadata.ReadMetrics(ctx, reader.client, reader.logger)
+	for _, metricsReader := range reader.metricsReaders {
+		metrics, err := metricsReader.Read(ctx, reader.client, reader.logger)
 
 		if err != nil {
-			reader.logger.Error(fmt.Sprintf("Cannot read data for metrics metadata %v because of and error %v", metadata.Name, err))
+			reader.logger.Error(fmt.Sprintf("Cannot read data for metrics reader %v because of and error %v",
+				metricsReader.Name, err))
 		} else {
 			result = append(result, metrics...)
 		}
