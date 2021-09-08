@@ -16,12 +16,15 @@ package googlecloudspannerreceiver
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/model/pdata"
 	"go.uber.org/zap"
+
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/googlecloudspannerreceiver/internal/reader"
 )
 
 var _ component.MetricsReceiver = (*googleCloudSpannerReceiver)(nil)
@@ -30,7 +33,7 @@ type googleCloudSpannerReceiver struct {
 	logger                *zap.Logger
 	nextConsumer          consumer.Metrics
 	config                *Config
-	projectMetricsReaders []*ProjectMetricsReader
+	projectMetricsReaders []*reader.ProjectMetricsReader
 }
 
 func newGoogleCloudSpannerReceiver(
@@ -71,27 +74,51 @@ func (gcsReceiver *googleCloudSpannerReceiver) Start(ctx context.Context, host c
 }
 
 func (gcsReceiver *googleCloudSpannerReceiver) Shutdown(context.Context) error {
-	for _, reader := range gcsReceiver.projectMetricsReaders {
-		reader.Shutdown()
+	for _, metricsReader := range gcsReceiver.projectMetricsReaders {
+		metricsReader.Shutdown()
 	}
 
 	return nil
 }
 
 func (gcsReceiver *googleCloudSpannerReceiver) initializeProjectMetricsReaders(ctx context.Context) error {
-	gcsReceiver.projectMetricsReaders = make([]*ProjectMetricsReader, len(gcsReceiver.config.Projects))
+	gcsReceiver.projectMetricsReaders = make([]*reader.ProjectMetricsReader, len(gcsReceiver.config.Projects))
 
 	for i, project := range gcsReceiver.config.Projects {
-		reader, err := NewProjectMetricsReader(project, gcsReceiver.config.TopMetricsQueryMaxRows, ctx, gcsReceiver.logger)
+		metricsReader, err := newProjectMetricsReader(project, gcsReceiver.config.TopMetricsQueryMaxRows, ctx, gcsReceiver.logger)
 
 		if err != nil {
 			return err
 		}
 
-		gcsReceiver.projectMetricsReaders[i] = reader
+		gcsReceiver.projectMetricsReaders[i] = metricsReader
 	}
 
 	return nil
+}
+
+func newProjectMetricsReader(project Project, topMetricsQueryMaxRows int, ctx context.Context, logger *zap.Logger) (*reader.ProjectMetricsReader, error) {
+	logger.Info(fmt.Sprintf("Constructing project metrics reader for project id %v", project.ID))
+
+	var databaseMetricsReaders []*reader.DatabaseMetricsReader
+
+	for _, instance := range project.Instances {
+		for _, database := range instance.Databases {
+			logger.Info(fmt.Sprintf("Constructing database metrics reader for project id %v, instance id %v, database %v",
+				project.ID, instance.ID, database.Name))
+
+			databaseMetricsReader, err := reader.NewDatabaseMetricsReader(ctx, project.ID, instance.ID, database.Name,
+				project.ServiceAccountKey, topMetricsQueryMaxRows, logger)
+
+			if err != nil {
+				return nil, err
+			}
+
+			databaseMetricsReaders = append(databaseMetricsReaders, databaseMetricsReader)
+		}
+	}
+
+	return reader.NewProjectMetricsReader(databaseMetricsReaders, logger), nil
 }
 
 func (gcsReceiver *googleCloudSpannerReceiver) collectData(ctx context.Context) error {
