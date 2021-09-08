@@ -429,7 +429,7 @@ func TestMetricsReaderMetadata_FullName(t *testing.T) {
 		metricsReaderMetadata.instanceId+"::"+metricsReaderMetadata.databaseName, (&metricsReaderMetadata).FullName())
 }
 
-func TestMetricsReaderMetadata_IntervalEnd(t *testing.T) {
+func TestMetricsReaderMetadata_IntervalEnd_TimestampColumnName(t *testing.T) {
 	timestamp := time.Now().UTC()
 	metadata := &MetricsReaderMetadata{
 		TimestampColumnName: timestampColumnName,
@@ -439,6 +439,17 @@ func TestMetricsReaderMetadata_IntervalEnd(t *testing.T) {
 	intervalEnd, _ := metadata.intervalEnd(row)
 
 	assert.Equal(t, timestamp, intervalEnd)
+}
+
+func TestMetricsReaderMetadata_IntervalEnd_NoTimestampColumnName(t *testing.T) {
+	metadata := &MetricsReaderMetadata{
+	}
+
+	row, _ := spanner.NewRow([]string{}, []interface{}{})
+	intervalEnd, _ := metadata.intervalEnd(row)
+
+	assert.NotNil(t, intervalEnd)
+	assert.False(t, intervalEnd.IsZero())
 }
 
 func TestMetricsReaderMetadata_IntervalEnd_Error(t *testing.T) {
