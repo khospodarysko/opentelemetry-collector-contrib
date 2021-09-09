@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package reader
+package statsmetadata
 
 import (
 	"go.opentelemetry.io/collector/model/pdata"
@@ -20,12 +20,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/googlecloudspannerreceiver/internal/metadata"
 )
 
-func NewTopQueryStatsMetricsReader(
-	projectId string,
-	instanceId string,
-	databaseName string,
-	topMetricsQueryMaxRows int) *MetricsReader {
-
+func NewTopQueryStatsMetricsMetadata() *metadata.MetricsMetadata {
 	query := "SELECT * FROM spanner_sys.query_stats_top_minute " +
 		"WHERE interval_end = (SELECT MAX(interval_end) FROM spanner_sys.query_stats_top_minute)" +
 		"ORDER BY EXECUTION_COUNT * AVG_CPU_SECONDS DESC"
@@ -147,13 +142,9 @@ func NewTopQueryStatsMetricsReader(
 		},
 	}
 
-	return &MetricsReader{
+	return &metadata.MetricsMetadata{
 		Name:                      "top minute query stats",
-		ProjectId:                 projectId,
-		InstanceId:                instanceId,
-		DatabaseName:              databaseName,
 		Query:                     query,
-		TopMetricsQueryMaxRows:    topMetricsQueryMaxRows,
 		MetricNamePrefix:          "database/spanner/query_stats/top/",
 		TimestampColumnName:       "INTERVAL_END",
 		QueryLabelValuesMetadata:  queryLabelValuesMetadata,
@@ -161,11 +152,7 @@ func NewTopQueryStatsMetricsReader(
 	}
 }
 
-func NewTotalQueryStatsMetricsReader(
-	projectId string,
-	instanceId string,
-	databaseName string) *MetricsReader {
-
+func NewTotalQueryStatsMetricsMetadata() *metadata.MetricsMetadata {
 	query := "SELECT * FROM spanner_sys.query_stats_total_minute " +
 		"WHERE interval_end = (SELECT MAX(interval_end) FROM spanner_sys.query_stats_total_minute)"
 
@@ -265,11 +252,8 @@ func NewTotalQueryStatsMetricsReader(
 		},
 	}
 
-	return &MetricsReader{
+	return &metadata.MetricsMetadata{
 		Name:                      "total minute query stats",
-		ProjectId:                 projectId,
-		InstanceId:                instanceId,
-		DatabaseName:              databaseName,
 		Query:                     query,
 		MetricNamePrefix:          "database/spanner/query_stats/total/",
 		TimestampColumnName:       "INTERVAL_END",

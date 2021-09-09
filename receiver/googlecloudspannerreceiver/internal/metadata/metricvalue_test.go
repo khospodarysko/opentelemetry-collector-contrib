@@ -30,10 +30,10 @@ func TestInt64MetricValueMetadata(t *testing.T) {
 		},
 	}
 
-	assert.Equal(t, metricName, metadata.GetMetricName())
-	assert.Equal(t, metricColumnName, metadata.GetMetricColumnName())
-	assert.Equal(t, metricDataType, metadata.GetMetricDataType())
-	assert.Equal(t, metricUnit, metadata.GetMetricUnit())
+	assert.Equal(t, metricName, metadata.Name())
+	assert.Equal(t, metricColumnName, metadata.ColumnName())
+	assert.Equal(t, metricDataType, metadata.DataType())
+	assert.Equal(t, metricUnit, metadata.Unit())
 
 	var expectedType *int64
 
@@ -50,10 +50,10 @@ func TestFloat64MetricValueMetadata(t *testing.T) {
 		},
 	}
 
-	assert.Equal(t, metricName, metadata.GetMetricName())
-	assert.Equal(t, metricColumnName, metadata.GetMetricColumnName())
-	assert.Equal(t, metricDataType, metadata.GetMetricDataType())
-	assert.Equal(t, metricUnit, metadata.GetMetricUnit())
+	assert.Equal(t, metricName, metadata.Name())
+	assert.Equal(t, metricColumnName, metadata.ColumnName())
+	assert.Equal(t, metricDataType, metadata.DataType())
+	assert.Equal(t, metricUnit, metadata.Unit())
 
 	var expectedType *float64
 
@@ -73,11 +73,11 @@ func TestInt64MetricValue(t *testing.T) {
 	metricValue :=
 		Int64MetricValue{
 			Int64MetricValueMetadata: metadata,
-			Value:                    int64Value,
+			Val:                      int64Value,
 		}
 
 	assert.Equal(t, metadata, metricValue.Int64MetricValueMetadata)
-	assert.Equal(t, int64Value, metricValue.GetValue())
+	assert.Equal(t, int64Value, metricValue.Value())
 }
 
 func TestFloat64MetricValue(t *testing.T) {
@@ -93,11 +93,11 @@ func TestFloat64MetricValue(t *testing.T) {
 	metricValue :=
 		Float64MetricValue{
 			Float64MetricValueMetadata: metadata,
-			Value:                      float64Value,
+			Val:                        float64Value,
 		}
 
 	assert.Equal(t, metadata, metricValue.Float64MetricValueMetadata)
-	assert.Equal(t, float64Value, metricValue.GetValue())
+	assert.Equal(t, float64Value, metricValue.Value())
 }
 
 func TestNewInt64MetricValue(t *testing.T) {
@@ -116,7 +116,7 @@ func TestNewInt64MetricValue(t *testing.T) {
 	metricValue := NewInt64MetricValue(metadata, valueHolder)
 
 	assert.Equal(t, metadata, metricValue.Int64MetricValueMetadata)
-	assert.Equal(t, int64Value, metricValue.GetValue())
+	assert.Equal(t, int64Value, metricValue.Value())
 }
 
 func TestNewFloat64MetricValue(t *testing.T) {
@@ -135,5 +135,5 @@ func TestNewFloat64MetricValue(t *testing.T) {
 	metricValue := NewFloat64MetricValue(metadata, valueHolder)
 
 	assert.Equal(t, metadata, metricValue.Float64MetricValueMetadata)
-	assert.Equal(t, float64Value, metricValue.GetValue())
+	assert.Equal(t, float64Value, metricValue.Value())
 }

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package reader
+package statsmetadata
 
 import (
 	"go.opentelemetry.io/collector/model/pdata"
@@ -20,12 +20,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/googlecloudspannerreceiver/internal/metadata"
 )
 
-func NewTopTransactionStatsMetricsReader(
-	projectId string,
-	instanceId string,
-	databaseName string,
-	topMetricsQueryMaxRows int) *MetricsReader {
-
+func NewTopTransactionStatsMetricsMetadata() *metadata.MetricsMetadata {
 	query := "SELECT * FROM spanner_sys.txn_stats_top_minute " +
 		"WHERE interval_end = (SELECT MAX(interval_end) FROM spanner_sys.txn_stats_top_minute)" +
 		"ORDER BY AVG_COMMIT_LATENCY_SECONDS DESC, COMMIT_ATTEMPT_COUNT DESC, AVG_BYTES DESC"
@@ -136,13 +131,9 @@ func NewTopTransactionStatsMetricsReader(
 		},
 	}
 
-	return &MetricsReader{
+	return &metadata.MetricsMetadata{
 		Name:                      "top minute transaction stats",
-		ProjectId:                 projectId,
-		InstanceId:                instanceId,
-		DatabaseName:              databaseName,
 		Query:                     query,
-		TopMetricsQueryMaxRows:    topMetricsQueryMaxRows,
 		MetricNamePrefix:          "database/spanner/txn_stats/top/",
 		TimestampColumnName:       "INTERVAL_END",
 		QueryLabelValuesMetadata:  queryLabelValuesMetadata,
@@ -150,10 +141,7 @@ func NewTopTransactionStatsMetricsReader(
 	}
 }
 
-func NewTotalTransactionStatsMetricsReader(
-	projectId string,
-	instanceId string,
-	databaseName string) *MetricsReader {
+func NewTotalTransactionStatsMetricsMetadata() *metadata.MetricsMetadata {
 
 	query := "SELECT * FROM spanner_sys.txn_stats_total_minute " +
 		"WHERE interval_end = (SELECT MAX(interval_end) FROM spanner_sys.txn_stats_total_minute)"
@@ -236,11 +224,8 @@ func NewTotalTransactionStatsMetricsReader(
 		},
 	}
 
-	return &MetricsReader{
+	return &metadata.MetricsMetadata{
 		Name:                      "total minute transaction stats",
-		ProjectId:                 projectId,
-		InstanceId:                instanceId,
-		DatabaseName:              databaseName,
 		Query:                     query,
 		MetricNamePrefix:          "database/spanner/txn_stats/total/",
 		TimestampColumnName:       "INTERVAL_END",

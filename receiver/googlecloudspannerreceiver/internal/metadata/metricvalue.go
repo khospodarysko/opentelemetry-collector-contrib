@@ -17,16 +17,14 @@ package metadata
 import "go.opentelemetry.io/collector/model/pdata"
 
 type MetricValueMetadata interface {
-	GetMetricName() string
-	GetMetricColumnName() string
-	GetMetricDataType() pdata.MetricDataType
-	GetMetricUnit() string
-	ValueHolder() interface{}
+	ValueMetadata
+	DataType() pdata.MetricDataType
+	Unit() string
 }
 
 type MetricValue interface {
 	MetricValueMetadata
-	GetValue() interface{}
+	Value() interface{}
 }
 
 type QueryMetricValueMetadata struct {
@@ -46,27 +44,27 @@ type Float64MetricValueMetadata struct {
 
 type Int64MetricValue struct {
 	Int64MetricValueMetadata
-	Value int64
+	Val int64
 }
 
 type Float64MetricValue struct {
 	Float64MetricValueMetadata
-	Value float64
+	Val float64
 }
 
-func (metadata QueryMetricValueMetadata) GetMetricName() string {
+func (metadata QueryMetricValueMetadata) Name() string {
 	return metadata.MetricName
 }
 
-func (metadata QueryMetricValueMetadata) GetMetricColumnName() string {
+func (metadata QueryMetricValueMetadata) ColumnName() string {
 	return metadata.MetricColumnName
 }
 
-func (metadata QueryMetricValueMetadata) GetMetricDataType() pdata.MetricDataType {
+func (metadata QueryMetricValueMetadata) DataType() pdata.MetricDataType {
 	return metadata.MetricDataType
 }
 
-func (metadata QueryMetricValueMetadata) GetMetricUnit() string {
+func (metadata QueryMetricValueMetadata) Unit() string {
 	return metadata.MetricUnit
 }
 
@@ -82,24 +80,24 @@ func (metadata Float64MetricValueMetadata) ValueHolder() interface{} {
 	return &valueHolder
 }
 
-func (value Int64MetricValue) GetValue() interface{} {
-	return value.Value
+func (value Int64MetricValue) Value() interface{} {
+	return value.Val
 }
 
-func (value Float64MetricValue) GetValue() interface{} {
-	return value.Value
+func (value Float64MetricValue) Value() interface{} {
+	return value.Val
 }
 
 func NewInt64MetricValue(metadata Int64MetricValueMetadata, valueHolder interface{}) Int64MetricValue {
 	return Int64MetricValue{
 		Int64MetricValueMetadata: metadata,
-		Value:                    *valueHolder.(*int64),
+		Val:                      *valueHolder.(*int64),
 	}
 }
 
 func NewFloat64MetricValue(metadata Float64MetricValueMetadata, valueHolder interface{}) Float64MetricValue {
 	return Float64MetricValue{
 		Float64MetricValueMetadata: metadata,
-		Value:                      *valueHolder.(*float64),
+		Val:                        *valueHolder.(*float64),
 	}
 }

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package reader
+package statsmetadata
 
 import (
 	"go.opentelemetry.io/collector/model/pdata"
@@ -20,11 +20,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/googlecloudspannerreceiver/internal/metadata"
 )
 
-func NewActiveQueriesSummaryMetricsReader(
-	projectId string,
-	instanceId string,
-	databaseName string) *MetricsReader {
-
+func NewActiveQueriesSummaryMetricsMetadata() *metadata.MetricsMetadata {
 	query := "select * from spanner_sys.active_queries_summary;"
 
 	// Labels
@@ -69,11 +65,8 @@ func NewActiveQueriesSummaryMetricsReader(
 		},
 	}
 
-	return &MetricsReader{
+	return &metadata.MetricsMetadata{
 		Name:                      "active queries summary",
-		ProjectId:                 projectId,
-		InstanceId:                instanceId,
-		DatabaseName:              databaseName,
 		Query:                     query,
 		MetricNamePrefix:          "database/spanner/active_queries_summary/",
 		QueryLabelValuesMetadata:  queryLabelValuesMetadata,

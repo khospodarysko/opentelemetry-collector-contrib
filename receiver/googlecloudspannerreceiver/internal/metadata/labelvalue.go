@@ -20,14 +20,12 @@ import (
 )
 
 type LabelValueMetadata interface {
-	GetLabelName() string
-	GetLabelColumnName() string
-	ValueHolder() interface{}
+	ValueMetadata
 }
 
 type LabelValue interface {
 	LabelValueMetadata
-	GetValue() interface{}
+	Value() interface{}
 }
 
 type QueryLabelValueMetadata struct {
@@ -57,34 +55,34 @@ type ByteSliceLabelValueMetadata struct {
 
 type StringLabelValue struct {
 	StringLabelValueMetadata
-	Value string
+	Val string
 }
 
 type Int64LabelValue struct {
 	Int64LabelValueMetadata
-	Value int64
+	Val int64
 }
 
 type BoolLabelValue struct {
 	BoolLabelValueMetadata
-	Value bool
+	Val bool
 }
 
 type StringSliceLabelValue struct {
 	StringSliceLabelValueMetadata
-	Value string
+	Val string
 }
 
 type ByteSliceLabelValue struct {
 	ByteSliceLabelValueMetadata
-	Value string
+	Val string
 }
 
-func (metadata QueryLabelValueMetadata) GetLabelName() string {
+func (metadata QueryLabelValueMetadata) Name() string {
 	return metadata.LabelName
 }
 
-func (metadata QueryLabelValueMetadata) GetLabelColumnName() string {
+func (metadata QueryLabelValueMetadata) ColumnName() string {
 	return metadata.LabelColumnName
 }
 
@@ -94,14 +92,14 @@ func (metadata StringLabelValueMetadata) ValueHolder() interface{} {
 	return &valueHolder
 }
 
-func (value StringLabelValue) GetValue() interface{} {
-	return value.Value
+func (value StringLabelValue) Value() interface{} {
+	return value.Val
 }
 
 func NewStringLabelValue(metadata StringLabelValueMetadata, valueHolder interface{}) StringLabelValue {
 	return StringLabelValue{
 		StringLabelValueMetadata: metadata,
-		Value:                    *valueHolder.(*string),
+		Val:                      *valueHolder.(*string),
 	}
 }
 
@@ -111,14 +109,14 @@ func (metadata Int64LabelValueMetadata) ValueHolder() interface{} {
 	return &valueHolder
 }
 
-func (value Int64LabelValue) GetValue() interface{} {
-	return value.Value
+func (value Int64LabelValue) Value() interface{} {
+	return value.Val
 }
 
 func NewInt64LabelValue(metadata Int64LabelValueMetadata, valueHolder interface{}) Int64LabelValue {
 	return Int64LabelValue{
 		Int64LabelValueMetadata: metadata,
-		Value:                   *valueHolder.(*int64),
+		Val:                     *valueHolder.(*int64),
 	}
 }
 
@@ -128,14 +126,14 @@ func (metadata BoolLabelValueMetadata) ValueHolder() interface{} {
 	return &valueHolder
 }
 
-func (value BoolLabelValue) GetValue() interface{} {
-	return value.Value
+func (value BoolLabelValue) Value() interface{} {
+	return value.Val
 }
 
 func NewBoolLabelValue(metadata BoolLabelValueMetadata, valueHolder interface{}) BoolLabelValue {
 	return BoolLabelValue{
 		BoolLabelValueMetadata: metadata,
-		Value:                  *valueHolder.(*bool),
+		Val:                    *valueHolder.(*bool),
 	}
 }
 
@@ -145,8 +143,8 @@ func (metadata StringSliceLabelValueMetadata) ValueHolder() interface{} {
 	return &valueHolder
 }
 
-func (value StringSliceLabelValue) GetValue() interface{} {
-	return value.Value
+func (value StringSliceLabelValue) Value() interface{} {
+	return value.Val
 }
 
 func NewStringSliceLabelValue(metadata StringSliceLabelValueMetadata, valueHolder interface{}) StringSliceLabelValue {
@@ -158,7 +156,7 @@ func NewStringSliceLabelValue(metadata StringSliceLabelValueMetadata, valueHolde
 
 	return StringSliceLabelValue{
 		StringSliceLabelValueMetadata: metadata,
-		Value:                         sortedAndConstructedValue,
+		Val:                           sortedAndConstructedValue,
 	}
 }
 
@@ -168,13 +166,13 @@ func (metadata ByteSliceLabelValueMetadata) ValueHolder() interface{} {
 	return &valueHolder
 }
 
-func (value ByteSliceLabelValue) GetValue() interface{} {
-	return value.Value
+func (value ByteSliceLabelValue) Value() interface{} {
+	return value.Val
 }
 
 func NewByteSliceLabelValue(metadata ByteSliceLabelValueMetadata, valueHolder interface{}) ByteSliceLabelValue {
 	return ByteSliceLabelValue{
 		ByteSliceLabelValueMetadata: metadata,
-		Value:                       string(*valueHolder.(*[]byte)),
+		Val:                         string(*valueHolder.(*[]byte)),
 	}
 }
