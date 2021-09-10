@@ -18,84 +18,64 @@ import (
 	"context"
 	"fmt"
 
-	"cloud.google.com/go/spanner"
 	"go.opentelemetry.io/collector/model/pdata"
 	"go.uber.org/zap"
-	"google.golang.org/api/option"
+
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/googlecloudspannerreceiver/internal/datasource"
 )
 
 type DatabaseMetricsReader struct {
-	client           *spanner.Client
-	fullDatabaseName string
-	logger           *zap.Logger
-	metricsReaders   []*MetricsReader
+	metricsSource  *datasource.MetricsSource
+	logger         *zap.Logger
+	metricsReaders []*MetricsReader
 }
 
 func NewDatabaseMetricsReader(ctx context.Context,
-	projectId string,
-	instanceId string,
-	databaseName string,
+	metricsSourceId *datasource.MetricsSourceId,
 	serviceAccountPath string,
 	topMetricsQueryMaxRows int,
 	logger *zap.Logger) (*DatabaseMetricsReader, error) {
 
-	fullDatabaseName := createFullDatabaseName(projectId, instanceId, databaseName)
-	client, err := createClient(ctx, fullDatabaseName, serviceAccountPath, logger)
+	metricsSource, err := datasource.NewMetricsSource(ctx, metricsSourceId, serviceAccountPath)
 
 	if err != nil {
+		logger.Error(fmt.Sprintf("Error occurred during client instantiation for database %v", metricsSourceId.Id()))
 		return nil, err
 	}
 
 	return &DatabaseMetricsReader{
-		client:           client,
-		fullDatabaseName: fullDatabaseName,
-		logger:           logger,
+		metricsSource: metricsSource,
+		logger:        logger,
 		metricsReaders: []*MetricsReader{
-			NewTopQueryStatsMetricsReader(projectId, instanceId, databaseName, topMetricsQueryMaxRows),
-			NewTotalQueryStatsMetricsReader(projectId, instanceId, databaseName),
-			NewTopReadStatsMetricsReader(projectId, instanceId, databaseName, topMetricsQueryMaxRows),
-			NewTotalReadStatsMetricsReader(projectId, instanceId, databaseName),
-			NewTopTransactionStatsMetricsReader(projectId, instanceId, databaseName, topMetricsQueryMaxRows),
-			NewTotalTransactionStatsMetricsReader(projectId, instanceId, databaseName),
-			NewTopLockStatsMetricsReader(projectId, instanceId, databaseName, topMetricsQueryMaxRows),
-			NewTotalLockStatsMetricsReader(projectId, instanceId, databaseName),
-			NewActiveQueriesSummaryMetricsReader(projectId, instanceId, databaseName),
+			NewTopQueryStatsMetricsReader(logger, metricsSource, topMetricsQueryMaxRows),
+			NewTotalQueryStatsMetricsReader(logger, metricsSource),
+			NewTopReadStatsMetricsReader(logger, metricsSource, topMetricsQueryMaxRows),
+			NewTotalReadStatsMetricsReader(logger, metricsSource),
+			NewTopTransactionStatsMetricsReader(logger, metricsSource, topMetricsQueryMaxRows),
+			NewTotalTransactionStatsMetricsReader(logger, metricsSource),
+			NewTopLockStatsMetricsReader(logger, metricsSource, topMetricsQueryMaxRows),
+			NewTotalLockStatsMetricsReader(logger, metricsSource),
+			NewActiveQueriesSummaryMetricsReader(logger, metricsSource),
 		},
 	}, nil
 }
 
-func createClient(ctx context.Context, database string, serviceAccountPath string, logger *zap.Logger) (*spanner.Client, error) {
-	credentialsFileClientOption := option.WithCredentialsFile(serviceAccountPath)
-	client, err := spanner.NewClient(ctx, database, credentialsFileClientOption)
-
-	if err != nil {
-		logger.Error(fmt.Sprintf("Error occurred during client instantiation for database %v", database))
-		return nil, err
-	}
-
-	return client, nil
-}
-
-func createFullDatabaseName(projectId string, instanceId string, database string) string {
-	return "projects/" + projectId + "/instances/" + instanceId + "/databases/" + database
-}
-
 func (reader *DatabaseMetricsReader) Shutdown() {
-	reader.logger.Info(fmt.Sprintf("Closing connection to database %v", reader.fullDatabaseName))
-	reader.client.Close()
+	reader.logger.Info(fmt.Sprintf("Closing connection to database %v", reader.metricsSource.MetricsSourceId().Id()))
+	reader.metricsSource.Client().Close()
 }
 
 func (reader *DatabaseMetricsReader) ReadMetrics(ctx context.Context) []pdata.Metrics {
-	reader.logger.Info(fmt.Sprintf("Executing read method for database %v", reader.fullDatabaseName))
+	reader.logger.Info(fmt.Sprintf("Executing read method for database %v", reader.metricsSource.MetricsSourceId().Id()))
 
 	var result []pdata.Metrics
 
 	for _, metricsReader := range reader.metricsReaders {
-		metrics, err := metricsReader.Read(ctx, reader.client, reader.logger)
+		metrics, err := metricsReader.Read(ctx)
 
 		if err != nil {
 			reader.logger.Error(fmt.Sprintf("Cannot read data for metrics reader %v because of and error %v",
-				metricsReader.Name, err))
+				metricsReader.Name(), err))
 		} else {
 			result = append(result, metrics...)
 		}

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package reader
+package statsmetadata
 
 import (
 	"go.opentelemetry.io/collector/model/pdata"
@@ -20,12 +20,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/googlecloudspannerreceiver/internal/metadata"
 )
 
-func NewTopReadStatsMetricsReader(
-	projectId string,
-	instanceId string,
-	databaseName string,
-	topMetricsQueryMaxRows int) *MetricsReader {
-
+func NewTopReadStatsMetricsMetadata() *metadata.MetricsMetadata {
 	query := "SELECT * FROM spanner_sys.read_stats_top_minute " +
 		"WHERE interval_end = (SELECT MAX(interval_end) FROM spanner_sys.read_stats_top_minute)" +
 		"ORDER BY EXECUTION_COUNT * AVG_CPU_SECONDS DESC"
@@ -113,13 +108,9 @@ func NewTopReadStatsMetricsReader(
 		},
 	}
 
-	return &MetricsReader{
+	return &metadata.MetricsMetadata{
 		Name:                      "top minute read stats",
-		ProjectId:                 projectId,
-		InstanceId:                instanceId,
-		DatabaseName:              databaseName,
 		Query:                     query,
-		TopMetricsQueryMaxRows:    topMetricsQueryMaxRows,
 		MetricNamePrefix:          "database/spanner/read_stats/top/",
 		TimestampColumnName:       "INTERVAL_END",
 		QueryLabelValuesMetadata:  queryLabelValuesMetadata,
@@ -127,11 +118,7 @@ func NewTopReadStatsMetricsReader(
 	}
 }
 
-func NewTotalReadStatsMetricsReader(
-	projectId string,
-	instanceId string,
-	databaseName string) *MetricsReader {
-
+func NewTotalReadStatsMetricsMetadata() *metadata.MetricsMetadata {
 	query := "SELECT * FROM spanner_sys.read_stats_total_minute " +
 		"WHERE interval_end = (SELECT MAX(interval_end) FROM spanner_sys.read_stats_total_minute)"
 
@@ -204,11 +191,8 @@ func NewTotalReadStatsMetricsReader(
 		},
 	}
 
-	return &MetricsReader{
+	return &metadata.MetricsMetadata{
 		Name:                      "total minute read stats",
-		ProjectId:                 projectId,
-		InstanceId:                instanceId,
-		DatabaseName:              databaseName,
 		Query:                     query,
 		MetricNamePrefix:          "database/spanner/read_stats/total/",
 		TimestampColumnName:       "INTERVAL_END",

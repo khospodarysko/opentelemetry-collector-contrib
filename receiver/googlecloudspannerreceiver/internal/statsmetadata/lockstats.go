@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package reader
+package statsmetadata
 
 import (
 	"go.opentelemetry.io/collector/model/pdata"
@@ -20,12 +20,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/googlecloudspannerreceiver/internal/metadata"
 )
 
-func NewTopLockStatsMetricsReader(
-	projectId string,
-	instanceId string,
-	databaseName string,
-	topMetricsQueryMaxRows int) *MetricsReader {
-
+func NewTopLockStatsMetricsMetadata() *metadata.MetricsMetadata {
 	query := "SELECT * FROM spanner_sys.lock_stats_top_minute " +
 		"WHERE interval_end = (SELECT MAX(interval_end) FROM spanner_sys.lock_stats_top_minute)" +
 		"ORDER BY LOCK_WAIT_SECONDS DESC"
@@ -52,13 +47,9 @@ func NewTopLockStatsMetricsReader(
 		},
 	}
 
-	return &MetricsReader{
+	return &metadata.MetricsMetadata{
 		Name:                      "top minute lock stats",
-		ProjectId:                 projectId,
-		InstanceId:                instanceId,
-		DatabaseName:              databaseName,
 		Query:                     query,
-		TopMetricsQueryMaxRows:    topMetricsQueryMaxRows,
 		MetricNamePrefix:          "database/spanner/lock_stats/top/",
 		TimestampColumnName:       "INTERVAL_END",
 		QueryLabelValuesMetadata:  queryLabelValuesMetadata,
@@ -66,11 +57,7 @@ func NewTopLockStatsMetricsReader(
 	}
 }
 
-func NewTotalLockStatsMetricsReader(
-	projectId string,
-	instanceId string,
-	databaseName string) *MetricsReader {
-
+func NewTotalLockStatsMetricsMetadata() *metadata.MetricsMetadata {
 	query := "SELECT * FROM spanner_sys.lock_stats_total_minute " +
 		"WHERE interval_end = (SELECT MAX(interval_end) FROM spanner_sys.lock_stats_total_minute)"
 
@@ -89,11 +76,8 @@ func NewTotalLockStatsMetricsReader(
 		},
 	}
 
-	return &MetricsReader{
+	return &metadata.MetricsMetadata{
 		Name:                      "total minute lock stats",
-		ProjectId:                 projectId,
-		InstanceId:                instanceId,
-		DatabaseName:              databaseName,
 		Query:                     query,
 		MetricNamePrefix:          "database/spanner/lock_stats/total/",
 		TimestampColumnName:       "INTERVAL_END",

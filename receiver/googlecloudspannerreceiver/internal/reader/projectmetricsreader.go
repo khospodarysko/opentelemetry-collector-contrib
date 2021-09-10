@@ -36,7 +36,8 @@ func NewProjectMetricsReader(databaseMetricsReaders []*DatabaseMetricsReader, lo
 
 func (reader *ProjectMetricsReader) Shutdown() {
 	for _, metricsReader := range reader.databaseMetricsReaders {
-		reader.logger.Info(fmt.Sprintf("Shutting down metrics reader for database %v", metricsReader.fullDatabaseName))
+		reader.logger.Info(fmt.Sprintf("Shutting down metrics reader for database %v",
+			metricsReader.metricsSource.MetricsSourceId().Id()))
 		metricsReader.Shutdown()
 	}
 }
