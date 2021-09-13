@@ -66,9 +66,7 @@ func (gcsReceiver *googleCloudSpannerReceiver) Start(ctx context.Context, host c
 		for {
 			select {
 			case <-ticker.C:
-				err := gcsReceiver.collectData(ctx)
-
-				if err != nil {
+				if err := gcsReceiver.collectData(ctx); err != nil {
 					gcsReceiver.logger.Error(fmt.Sprintf("Error occurred during metrics data collection %v", err))
 				}
 			case <-ctx.Done():
@@ -141,8 +139,7 @@ func (gcsReceiver *googleCloudSpannerReceiver) collectData(ctx context.Context) 
 	}
 
 	for _, metric := range allMetrics {
-		err := gcsReceiver.nextConsumer.ConsumeMetrics(ctx, metric)
-		if err != nil {
+		if err := gcsReceiver.nextConsumer.ConsumeMetrics(ctx, metric); err != nil {
 			gcsReceiver.logger.Error(fmt.Sprintf("Failed to consume metric(s): %v because of an error %v",
 				metricName(metric), err))
 			return err
