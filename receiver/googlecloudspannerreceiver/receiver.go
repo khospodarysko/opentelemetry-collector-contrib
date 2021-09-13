@@ -66,8 +66,11 @@ func (gcsReceiver *googleCloudSpannerReceiver) Start(ctx context.Context, host c
 		for {
 			select {
 			case <-ticker.C:
-				// TODO Need to add appropriate error handling here
-				gcsReceiver.collectData(ctx)
+				err := gcsReceiver.collectData(ctx)
+
+				if err != nil {
+					gcsReceiver.logger.Error(fmt.Sprintf("Error occurred during metrics data collection %v", err))
+				}
 			case <-ctx.Done():
 				return
 			}
@@ -140,9 +143,34 @@ func (gcsReceiver *googleCloudSpannerReceiver) collectData(ctx context.Context) 
 	for _, metric := range allMetrics {
 		err := gcsReceiver.nextConsumer.ConsumeMetrics(ctx, metric)
 		if err != nil {
+			gcsReceiver.logger.Error(fmt.Sprintf("Failed to consume metric(s): %v because of an error %v",
+				metricName(metric), err))
 			return err
 		}
 	}
 
 	return nil
+}
+
+func metricName(metric pdata.Metrics) string {
+	var mName string
+	resourceMetrics := metric.ResourceMetrics()
+
+	for i := 0; i < resourceMetrics.Len(); i++ {
+		ilm := resourceMetrics.At(i).InstrumentationLibraryMetrics()
+
+		for j := 0; j < ilm.Len(); j++ {
+			metrics := ilm.At(j).Metrics()
+
+			for k := 0; k < metrics.Len(); k++ {
+				mName += metrics.At(k).Name() + ","
+			}
+		}
+	}
+
+	if mName != "" {
+		mName = mName[:len(mName)-1]
+	}
+
+	return mName
 }
