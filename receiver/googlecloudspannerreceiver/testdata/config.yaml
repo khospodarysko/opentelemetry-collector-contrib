@@ -1,34 +1,30 @@
 receivers:
   googlecloudspanner:
-    collection_interval: 10s
+    collection_interval: 60s
     top_metrics_query_max_rows: 100
     projects:
       - project_id: "spanner project 1"
         service_account_key: "path to spanner project 1 service account json key"
         instances:
-          - id: "id1"
-            name: "First instance"
+          - instance_id: "id1"
             databases:
-              - name: "db11"
-              - name: "db12"
-          - id: "id2"
-            name: "Second instance"
+              - "db11"
+              - "db12"
+          - instance_id: "id2"
             databases:
-              - name: "db21"
-              - name: "db22"
+              - "db21"
+              - "db22"
       - project_id: "spanner project 2"
         service_account_key: "path to spanner project 2 service account json key"
         instances:
-          - id: "id3"
-            name: "Third instance"
+          - instance_id: "id3"
             databases:
-              - name: "db31"
-              - name: "db32"
-          - id: "id4"
-            name: "Fourth instance"
+              - "db31"
+              - "db32"
+          - instance_id: "id4"
             databases:
-              - name: "db41"
-              - name: "db42"
+              - "db41"
+              - "db42"
 
 processors:
   nop:
