@@ -113,9 +113,9 @@ func newProjectMetricsReader(project Project, topMetricsQueryMaxRows int, ctx co
 	for _, instance := range project.Instances {
 		for _, database := range instance.Databases {
 			logger.Info(fmt.Sprintf("Constructing database metrics reader for project id %v, instance id %v, database %v",
-				project.ID, instance.ID, database.Name))
+				project.ID, instance.ID, database))
 
-			metricsSourceId := datasource.NewMetricsSourceId(project.ID, instance.ID, database.Name)
+			metricsSourceId := datasource.NewMetricsSourceId(project.ID, instance.ID, database)
 
 			databaseMetricsReader, err := reader.NewDatabaseMetricsReader(ctx, metricsSourceId,
 				project.ServiceAccountKey, topMetricsQueryMaxRows, logger)

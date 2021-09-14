@@ -17,6 +17,7 @@ package googlecloudspannerreceiver
 import (
 	"path"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -50,150 +51,99 @@ func TestLoadConfig(t *testing.T) {
 	assert.Equal(t, len(receiver.Projects[0].Instances), 2)
 
 	assert.Equal(t, receiver.Projects[0].Instances[0].ID, "id1")
-	assert.Equal(t, receiver.Projects[0].Instances[0].Name, "First instance")
 	assert.Equal(t, len(receiver.Projects[0].Instances[0].Databases), 2)
-	assert.Equal(t, receiver.Projects[0].Instances[0].Databases[0].Name, "db11")
-	assert.Equal(t, receiver.Projects[0].Instances[0].Databases[1].Name, "db12")
+	assert.Equal(t, receiver.Projects[0].Instances[0].Databases[0], "db11")
+	assert.Equal(t, receiver.Projects[0].Instances[0].Databases[1], "db12")
 	assert.Equal(t, receiver.Projects[0].Instances[1].ID, "id2")
-	assert.Equal(t, receiver.Projects[0].Instances[1].Name, "Second instance")
 	assert.Equal(t, len(receiver.Projects[0].Instances[1].Databases), 2)
-	assert.Equal(t, receiver.Projects[0].Instances[1].Databases[0].Name, "db21")
-	assert.Equal(t, receiver.Projects[0].Instances[1].Databases[1].Name, "db22")
+	assert.Equal(t, receiver.Projects[0].Instances[1].Databases[0], "db21")
+	assert.Equal(t, receiver.Projects[0].Instances[1].Databases[1], "db22")
 
 	assert.Equal(t, receiver.Projects[1].ID, "spanner project 2")
 	assert.Equal(t, receiver.Projects[1].ServiceAccountKey, "path to spanner project 2 service account json key")
 	assert.Equal(t, len(receiver.Projects[1].Instances), 2)
 
 	assert.Equal(t, receiver.Projects[1].Instances[0].ID, "id3")
-	assert.Equal(t, receiver.Projects[1].Instances[0].Name, "Third instance")
 	assert.Equal(t, len(receiver.Projects[1].Instances[0].Databases), 2)
-	assert.Equal(t, receiver.Projects[1].Instances[0].Databases[0].Name, "db31")
-	assert.Equal(t, receiver.Projects[1].Instances[0].Databases[1].Name, "db32")
+	assert.Equal(t, receiver.Projects[1].Instances[0].Databases[0], "db31")
+	assert.Equal(t, receiver.Projects[1].Instances[0].Databases[1], "db32")
 	assert.Equal(t, receiver.Projects[1].Instances[1].ID, "id4")
-	assert.Equal(t, receiver.Projects[1].Instances[1].Name, "Fourth instance")
 	assert.Equal(t, len(receiver.Projects[1].Instances[1].Databases), 2)
-	assert.Equal(t, receiver.Projects[1].Instances[1].Databases[0].Name, "db41")
-	assert.Equal(t, receiver.Projects[1].Instances[1].Databases[1].Name, "db42")
-}
-
-func TestValidateDatabase(t *testing.T) {
-	err := Database{Name: "name"}.Validate()
-
-	require.NoError(t, err)
-
-	err = Database{Name: ""}.Validate()
-
-	require.Error(t, err)
+	assert.Equal(t, receiver.Projects[1].Instances[1].Databases[0], "db41")
+	assert.Equal(t, receiver.Projects[1].Instances[1].Databases[1], "db42")
 }
 
 func TestValidateInstance(t *testing.T) {
-	// All required fields are populated
-	database := Database{Name: "name"}
-
-	instance := Instance{
-		ID:        "id",
-		Name:      "name",
-		Databases: []Database{database},
+	var testsCases = map[string]struct {
+		id           string
+		databases    []string
+		requireError bool
+	}{
+		"All required fields are populated": {"id", []string{"name"}, false},
+		"No id":                             {"", []string{"name"}, true},
+		"No databases":                      {"id", nil, true},
+		"Databases have empty names":        {"id", []string{""}, true},
 	}
 
-	err := instance.Validate()
+	for name, testCase := range testsCases {
+		t.Run(name, func(t *testing.T) {
+			instance := Instance{
+				ID:        testCase.id,
+				Databases: testCase.databases,
+			}
 
-	require.NoError(t, err)
+			err := instance.Validate()
 
-	// No id
-	instance = Instance{
-		ID:        "",
-		Name:      "name",
-		Databases: []Database{database},
+			if testCase.requireError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
 	}
-
-	err = instance.Validate()
-
-	require.Error(t, err)
-
-	// No name
-	instance = Instance{
-		ID:        "id",
-		Name:      "",
-		Databases: []Database{database},
-	}
-
-	err = instance.Validate()
-
-	require.Error(t, err)
-
-	// No databases
-	instance = Instance{
-		ID:   "id",
-		Name: "name",
-	}
-
-	err = instance.Validate()
-
-	require.Error(t, err)
 }
 
 func TestValidateProject(t *testing.T) {
-	// All required fields are populated
-	database := Database{Name: "name"}
-
 	instance := Instance{
 		ID:        "id",
-		Name:      "name",
-		Databases: []Database{database},
+		Databases: []string{"name"},
 	}
 
-	project := Project{
-		ID:                "id",
-		ServiceAccountKey: "key",
-		Instances:         []Instance{instance},
+	var testsCases = map[string]struct {
+		id                string
+		serviceAccountKey string
+		instances         []Instance
+		requireError      bool
+	}{
+		"All required fields are populated": {"id", "key", []Instance{instance}, false},
+		"No id":                             {"", "key", []Instance{instance}, true},
+		"No service account key":            {"id", "", []Instance{instance}, true},
+		"No instances":                      {"id", "key", nil, true},
 	}
 
-	err := project.Validate()
+	for name, testCase := range testsCases {
+		t.Run(name, func(t *testing.T) {
+			project := Project{
+				ID:                testCase.id,
+				ServiceAccountKey: testCase.serviceAccountKey,
+				Instances:         testCase.instances,
+			}
 
-	require.NoError(t, err)
+			err := project.Validate()
 
-	// No id
-	project = Project{
-		ID:                "",
-		ServiceAccountKey: "key",
-		Instances:         []Instance{instance},
+			if testCase.requireError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
 	}
-
-	err = project.Validate()
-
-	require.Error(t, err)
-
-	// No service account key
-	project = Project{
-		ID:                "id",
-		ServiceAccountKey: "",
-		Instances:         []Instance{instance},
-	}
-
-	err = project.Validate()
-
-	require.Error(t, err)
-
-	// No instances
-	project = Project{
-		ID:                "id",
-		ServiceAccountKey: "key",
-	}
-
-	err = project.Validate()
-
-	require.Error(t, err)
 }
 
 func TestValidateConfig(t *testing.T) {
-	// All required fields are populated
-	database := Database{Name: "name"}
-
 	instance := Instance{
 		ID:        "id",
-		Name:      "name",
-		Databases: []Database{database},
+		Databases: []string{"name"},
 	}
 
 	project := Project{
@@ -202,57 +152,37 @@ func TestValidateConfig(t *testing.T) {
 		Instances:         []Instance{instance},
 	}
 
-	cfg := &Config{
-		ScraperControllerSettings: scraperhelper.ScraperControllerSettings{
-			ReceiverSettings:   config.NewReceiverSettings(config.NewID(typeStr)),
-			CollectionInterval: defaultCollectionInterval,
-		},
-		TopMetricsQueryMaxRows: defaultTopMetricsQueryMaxRows,
-		Projects:               []Project{project},
+	var testsCases = map[string]struct {
+		collectionInterval     time.Duration
+		topMetricsQueryMaxRows int
+		projects               []Project
+		requireError           bool
+	}{
+		"All required fields are populated":                   {defaultCollectionInterval, defaultTopMetricsQueryMaxRows, []Project{project}, false},
+		"Invalid collection interval":                         {-1, defaultTopMetricsQueryMaxRows, []Project{project}, true},
+		"Invalid top metrics query max rows":                  {defaultCollectionInterval, -1, []Project{project}, true},
+		"Top metrics query max rows greater than max allowed": {defaultCollectionInterval, defaultTopMetricsQueryMaxRows + 1, []Project{project}, true},
+		"No projects": {defaultCollectionInterval, defaultTopMetricsQueryMaxRows, nil, true},
 	}
 
-	err := cfg.Validate()
+	for name, testCase := range testsCases {
+		t.Run(name, func(t *testing.T) {
+			cfg := &Config{
+				ScraperControllerSettings: scraperhelper.ScraperControllerSettings{
+					ReceiverSettings:   config.NewReceiverSettings(config.NewID(typeStr)),
+					CollectionInterval: testCase.collectionInterval,
+				},
+				TopMetricsQueryMaxRows: testCase.topMetricsQueryMaxRows,
+				Projects:               testCase.projects,
+			}
 
-	require.NoError(t, err)
+			err := cfg.Validate()
 
-	// Invalid collection interval
-	cfg = &Config{
-		ScraperControllerSettings: scraperhelper.ScraperControllerSettings{
-			ReceiverSettings:   config.NewReceiverSettings(config.NewID(typeStr)),
-			CollectionInterval: -1,
-		},
-		TopMetricsQueryMaxRows: defaultTopMetricsQueryMaxRows,
-		Projects:               []Project{project},
+			if testCase.requireError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
 	}
-
-	err = cfg.Validate()
-
-	require.Error(t, err)
-
-	// Invalid top metrics query max rows
-	cfg = &Config{
-		ScraperControllerSettings: scraperhelper.ScraperControllerSettings{
-			ReceiverSettings:   config.NewReceiverSettings(config.NewID(typeStr)),
-			CollectionInterval: defaultCollectionInterval,
-		},
-		TopMetricsQueryMaxRows: -1,
-		Projects:               []Project{project},
-	}
-
-	err = cfg.Validate()
-
-	require.Error(t, err)
-
-	// No projects
-	cfg = &Config{
-		ScraperControllerSettings: scraperhelper.ScraperControllerSettings{
-			ReceiverSettings:   config.NewReceiverSettings(config.NewID(typeStr)),
-			CollectionInterval: defaultCollectionInterval,
-		},
-		TopMetricsQueryMaxRows: defaultTopMetricsQueryMaxRows,
-	}
-
-	err = cfg.Validate()
-
-	require.Error(t, err)
 }

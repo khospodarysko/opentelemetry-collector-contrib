@@ -35,22 +35,23 @@ type Project struct {
 }
 
 type Instance struct {
-	ID        string     `mapstructure:"id"`
-	Name      string     `mapstructure:"name"`
-	Databases []Database `mapstructure:"databases"`
-}
-
-type Database struct {
-	Name string `mapstructure:"name"`
+	ID        string   `mapstructure:"instance_id"`
+	Databases []string `mapstructure:"databases"`
 }
 
 func (config *Config) Validate() error {
-	if config.CollectionInterval <= 0 {
-		return fmt.Errorf("%v `collection_interval` must be positive: %vms", config.ID(), config.CollectionInterval.Milliseconds())
+	if config.CollectionInterval.Seconds() < 60 {
+		return fmt.Errorf("%v `collection_interval` must be not lower than 60s, current value is %vs",
+			config.ID(), config.CollectionInterval.Seconds())
 	}
 
 	if config.TopMetricsQueryMaxRows <= 0 {
 		return fmt.Errorf("%v `top_metrics_query_max_rows` must be positive: %v", config.ID(), config.TopMetricsQueryMaxRows)
+	}
+
+	if config.TopMetricsQueryMaxRows > 100 {
+		return fmt.Errorf("%v `top_metrics_query_max_rows` must be not greater than 100, current value is %v",
+			config.ID(), config.TopMetricsQueryMaxRows)
 	}
 
 	if len(config.Projects) <= 0 {
@@ -95,18 +96,8 @@ func (project Project) Validate() error {
 }
 
 func (instance Instance) Validate() error {
-	var missingFields []string
-
 	if instance.ID == "" {
-		missingFields = append(missingFields, "`id`")
-	}
-
-	if instance.Name == "" {
-		missingFields = append(missingFields, "`name`")
-	}
-
-	if len(missingFields) > 0 {
-		return fmt.Errorf("field(s) %v is(are) required for instance configuration", strings.Join(missingFields, ", "))
+		return fmt.Errorf("field %v is required and cannot be empty for instance configuration", "`instance_id`")
 	}
 
 	if len(instance.Databases) <= 0 {
@@ -114,17 +105,9 @@ func (instance Instance) Validate() error {
 	}
 
 	for _, database := range instance.Databases {
-		if err := database.Validate(); err != nil {
-			return err
+		if database == "" {
+			return fmt.Errorf("field %v contains empty database names", "`databases`")
 		}
-	}
-
-	return nil
-}
-
-func (database Database) Validate() error {
-	if database.Name == "" {
-		return fmt.Errorf("field %v is required for database configuration", "`name`")
 	}
 
 	return nil
