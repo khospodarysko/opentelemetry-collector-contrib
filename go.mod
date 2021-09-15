@@ -106,6 +106,7 @@ require (
 require (
 	cloud.google.com/go v0.93.3 // indirect
 	cloud.google.com/go/monitoring v0.1.0 // indirect
+	cloud.google.com/go/spanner v1.25.0 // indirect
 	cloud.google.com/go/trace v0.1.0 // indirect
 	code.cloudfoundry.org/clock v1.0.0 // indirect
 	contrib.go.opencensus.io/exporter/prometheus v0.4.0 // indirect
@@ -307,6 +308,7 @@ require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/jaeger v0.35.0 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/opencensus v0.35.0 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/zipkin v0.35.0 // indirect
+	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/googlecloudspannerreceiver v0.35.0 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/scraperhelper v0.35.0 // indirect
 	github.com/open-telemetry/opentelemetry-log-collection v0.20.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
