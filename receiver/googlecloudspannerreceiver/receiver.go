@@ -25,17 +25,17 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/googlecloudspannerreceiver/internal/datasource"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/googlecloudspannerreceiver/internal/reader"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/googlecloudspannerreceiver/internal/statsreader"
 )
 
 var _ component.MetricsReceiver = (*googleCloudSpannerReceiver)(nil)
 
 type googleCloudSpannerReceiver struct {
-	logger                *zap.Logger
-	nextConsumer          consumer.Metrics
-	config                *Config
-	cancel                context.CancelFunc
-	projectMetricsReaders []*reader.ProjectMetricsReader
+	logger         *zap.Logger
+	nextConsumer   consumer.Metrics
+	config         *Config
+	cancel         context.CancelFunc
+	projectReaders []*statsreader.ProjectReader
 }
 
 func newGoogleCloudSpannerReceiver(
@@ -51,23 +51,23 @@ func newGoogleCloudSpannerReceiver(
 	return r, nil
 }
 
-func (gcsReceiver *googleCloudSpannerReceiver) Start(ctx context.Context, host component.Host) error {
-	ctx, gcsReceiver.cancel = context.WithCancel(ctx)
-	err := gcsReceiver.initializeProjectMetricsReaders(ctx)
+func (receiver *googleCloudSpannerReceiver) Start(ctx context.Context, host component.Host) error {
+	ctx, receiver.cancel = context.WithCancel(ctx)
+	err := receiver.initializeProjectReaders(ctx)
 
 	if err != nil {
 		return err
 	}
 
 	go func() {
-		ticker := time.NewTicker(gcsReceiver.config.CollectionInterval)
+		ticker := time.NewTicker(receiver.config.CollectionInterval)
 		defer ticker.Stop()
 
 		for {
 			select {
 			case <-ticker.C:
-				if err := gcsReceiver.collectData(ctx); err != nil {
-					gcsReceiver.logger.Error(fmt.Sprintf("Error occurred during metrics data collection %v", err))
+				if err := receiver.collectData(ctx); err != nil {
+					receiver.logger.Error(fmt.Sprintf("Error occurred during data collection %v", err))
 				}
 			case <-ctx.Done():
 				return
@@ -78,69 +78,75 @@ func (gcsReceiver *googleCloudSpannerReceiver) Start(ctx context.Context, host c
 	return nil
 }
 
-func (gcsReceiver *googleCloudSpannerReceiver) Shutdown(context.Context) error {
-	for _, metricsReader := range gcsReceiver.projectMetricsReaders {
-		metricsReader.Shutdown()
+func (receiver *googleCloudSpannerReceiver) Shutdown(context.Context) error {
+	for _, projectReader := range receiver.projectReaders {
+		projectReader.Shutdown()
 	}
 
-	gcsReceiver.cancel()
+	receiver.cancel()
 
 	return nil
 }
 
-func (gcsReceiver *googleCloudSpannerReceiver) initializeProjectMetricsReaders(ctx context.Context) error {
-	gcsReceiver.projectMetricsReaders = make([]*reader.ProjectMetricsReader, len(gcsReceiver.config.Projects))
+func (receiver *googleCloudSpannerReceiver) initializeProjectReaders(ctx context.Context) error {
+	receiver.projectReaders = make([]*statsreader.ProjectReader, len(receiver.config.Projects))
 
-	for i, project := range gcsReceiver.config.Projects {
-		metricsReader, err := newProjectMetricsReader(project, gcsReceiver.config.TopMetricsQueryMaxRows, ctx, gcsReceiver.logger)
+	readerConfig := statsreader.ReaderConfig{
+		// TODO Add real configuration parameter setter
+		BackFillEnabled:        false,
+		TopMetricsQueryMaxRows: receiver.config.TopMetricsQueryMaxRows,
+	}
+
+	for i, project := range receiver.config.Projects {
+		projectReader, err := newProjectMetricsReader(project, readerConfig, ctx, receiver.logger)
 
 		if err != nil {
 			return err
 		}
 
-		gcsReceiver.projectMetricsReaders[i] = metricsReader
+		receiver.projectReaders[i] = projectReader
 	}
 
 	return nil
 }
 
-func newProjectMetricsReader(project Project, topMetricsQueryMaxRows int, ctx context.Context,
-	logger *zap.Logger) (*reader.ProjectMetricsReader, error) {
-	logger.Info(fmt.Sprintf("Constructing project metrics reader for project id %v", project.ID))
+func newProjectMetricsReader(project Project, readerConfig statsreader.ReaderConfig, ctx context.Context,
+	logger *zap.Logger) (*statsreader.ProjectReader, error) {
+	logger.Info(fmt.Sprintf("Constructing project reader for project id %v", project.ID))
 
-	var databaseMetricsReaders []*reader.DatabaseMetricsReader
+	var databaseReaders []*statsreader.DatabaseReader
 
 	for _, instance := range project.Instances {
 		for _, database := range instance.Databases {
-			logger.Info(fmt.Sprintf("Constructing database metrics reader for project id %v, instance id %v, database %v",
+			logger.Info(fmt.Sprintf("Constructing database reader for project id %v, instance id %v, database %v",
 				project.ID, instance.ID, database))
 
-			metricsSourceId := datasource.NewMetricsSourceId(project.ID, instance.ID, database)
+			databaseId := datasource.NewDatabaseId(project.ID, instance.ID, database)
 
-			databaseMetricsReader, err := reader.NewDatabaseMetricsReader(ctx, metricsSourceId,
-				project.ServiceAccountKey, topMetricsQueryMaxRows, logger)
+			databaseReader, err := statsreader.NewDatabaseReader(ctx, databaseId,
+				project.ServiceAccountKey, readerConfig, logger)
 
 			if err != nil {
 				return nil, err
 			}
 
-			databaseMetricsReaders = append(databaseMetricsReaders, databaseMetricsReader)
+			databaseReaders = append(databaseReaders, databaseReader)
 		}
 	}
 
-	return reader.NewProjectMetricsReader(databaseMetricsReaders, logger), nil
+	return statsreader.NewProjectReader(databaseReaders, logger), nil
 }
 
-func (gcsReceiver *googleCloudSpannerReceiver) collectData(ctx context.Context) error {
+func (receiver *googleCloudSpannerReceiver) collectData(ctx context.Context) error {
 	var allMetrics []pdata.Metrics
 
-	for _, metricsReader := range gcsReceiver.projectMetricsReaders {
-		allMetrics = append(allMetrics, metricsReader.ReadMetrics(ctx)...)
+	for _, projectReader := range receiver.projectReaders {
+		allMetrics = append(allMetrics, projectReader.Read(ctx)...)
 	}
 
 	for _, metric := range allMetrics {
-		if err := gcsReceiver.nextConsumer.ConsumeMetrics(ctx, metric); err != nil {
-			gcsReceiver.logger.Error(fmt.Sprintf("Failed to consume metric(s): %v because of an error %v",
+		if err := receiver.nextConsumer.ConsumeMetrics(ctx, metric); err != nil {
+			receiver.logger.Error(fmt.Sprintf("Failed to consume metric(s): %v because of an error %v",
 				metricName(metric), err))
 			return err
 		}

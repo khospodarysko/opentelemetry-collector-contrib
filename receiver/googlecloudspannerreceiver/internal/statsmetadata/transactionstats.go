@@ -21,9 +21,9 @@ import (
 )
 
 func NewTopTransactionStatsMetricsMetadata() *metadata.MetricsMetadata {
-	query := "SELECT * FROM spanner_sys.txn_stats_top_minute " +
-		"WHERE interval_end = (SELECT MAX(interval_end) FROM spanner_sys.txn_stats_top_minute)" +
-		"ORDER BY AVG_COMMIT_LATENCY_SECONDS DESC, COMMIT_ATTEMPT_COUNT DESC, AVG_BYTES DESC"
+	query := "SELECT * FROM SPANNER_SYS.TXN_STATS_TOP_MINUTE " +
+		"WHERE INTERVAL_END = @pullTimestamp " +
+		"ORDER BY INTERVAL_END DESC, AVG_COMMIT_LATENCY_SECONDS DESC, COMMIT_ATTEMPT_COUNT DESC, AVG_BYTES DESC"
 
 	// Labels
 	queryLabelValuesMetadata := []metadata.LabelValueMetadata{
@@ -144,7 +144,7 @@ func NewTopTransactionStatsMetricsMetadata() *metadata.MetricsMetadata {
 func NewTotalTransactionStatsMetricsMetadata() *metadata.MetricsMetadata {
 
 	query := "SELECT * FROM spanner_sys.txn_stats_total_minute " +
-		"WHERE interval_end = (SELECT MAX(interval_end) FROM spanner_sys.txn_stats_total_minute)"
+		"WHERE INTERVAL_END = @pullTimestamp"
 
 	// Labels
 	var queryLabelValuesMetadata []metadata.LabelValueMetadata

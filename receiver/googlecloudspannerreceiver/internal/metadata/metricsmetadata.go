@@ -40,17 +40,17 @@ type MetricsMetadata struct {
 	QueryMetricValuesMetadata []MetricValueMetadata
 }
 
-func (metadata *MetricsMetadata) intervalEnd(row *spanner.Row) (time.Time, error) {
-	var intervalEnd time.Time
+func (metadata *MetricsMetadata) timestamp(row *spanner.Row) (time.Time, error) {
+	var timestamp time.Time
 	var err error
 
 	if metadata.TimestampColumnName != "" {
-		err = row.ColumnByName(metadata.TimestampColumnName, &intervalEnd)
+		err = row.ColumnByName(metadata.TimestampColumnName, &timestamp)
 	} else {
-		intervalEnd = time.Now().UTC()
+		timestamp = time.Now().UTC()
 	}
 
-	return intervalEnd, err
+	return timestamp, err
 }
 
 func (metadata *MetricsMetadata) toLabelValues(row *spanner.Row) ([]LabelValue, error) {
@@ -121,11 +121,11 @@ func toMetricValue(metricValueMetadata MetricValueMetadata, row *spanner.Row) (M
 	return value, err
 }
 
-func (metadata *MetricsMetadata) RowToMetrics(metricsSourceId *datasource.MetricsSourceId, row *spanner.Row) ([]pdata.Metrics, error) {
-	intervalEnd, err := metadata.intervalEnd(row)
+func (metadata *MetricsMetadata) RowToMetrics(metricsSourceId *datasource.DatabaseId, row *spanner.Row) ([]pdata.Metrics, error) {
+	timestamp, err := metadata.timestamp(row)
 
 	if err != nil {
-		return nil, fmt.Errorf("error occurred during extracting interval end %v", err)
+		return nil, fmt.Errorf("error occurred during extracting timestamp %v", err)
 	}
 
 	// Reading labels
@@ -142,10 +142,10 @@ func (metadata *MetricsMetadata) RowToMetrics(metricsSourceId *datasource.Metric
 		return nil, fmt.Errorf("error occurred during extracting metric values row: %v", err)
 	}
 
-	return metadata.toMetrics(metricsSourceId, intervalEnd, labelValues, metricValues), nil
+	return metadata.toMetrics(metricsSourceId, timestamp, labelValues, metricValues), nil
 }
 
-func (metadata *MetricsMetadata) toMetrics(metricsSourceId *datasource.MetricsSourceId, intervalEnd time.Time,
+func (metadata *MetricsMetadata) toMetrics(databaseId *datasource.DatabaseId, timestamp time.Time,
 	labelValues []LabelValue, metricValues []MetricValue) []pdata.Metrics {
 
 	var metrics []pdata.Metrics
@@ -180,7 +180,7 @@ func (metadata *MetricsMetadata) toMetrics(metricsSourceId *datasource.MetricsSo
 			dataPoint.SetIntVal(valueCasted.Val)
 		}
 
-		dataPoint.SetTimestamp(pdata.NewTimestampFromTime(intervalEnd))
+		dataPoint.SetTimestamp(pdata.NewTimestampFromTime(timestamp))
 
 		for _, labelValue := range labelValues {
 			switch valueCasted := labelValue.(type) {
@@ -197,9 +197,9 @@ func (metadata *MetricsMetadata) toMetrics(metricsSourceId *datasource.MetricsSo
 			}
 		}
 
-		dataPoint.Attributes().InsertString(projectIdLabelName, metricsSourceId.ProjectId())
-		dataPoint.Attributes().InsertString(instanceIdLabelName, metricsSourceId.InstanceId())
-		dataPoint.Attributes().InsertString(databaseLabelName, metricsSourceId.DatabaseName())
+		dataPoint.Attributes().InsertString(projectIdLabelName, databaseId.ProjectId())
+		dataPoint.Attributes().InsertString(instanceIdLabelName, databaseId.InstanceId())
+		dataPoint.Attributes().InsertString(databaseLabelName, databaseId.DatabaseName())
 
 		metrics = append(metrics, md)
 	}

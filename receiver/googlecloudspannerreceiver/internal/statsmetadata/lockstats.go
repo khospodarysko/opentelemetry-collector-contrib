@@ -21,9 +21,9 @@ import (
 )
 
 func NewTopLockStatsMetricsMetadata() *metadata.MetricsMetadata {
-	query := "SELECT * FROM spanner_sys.lock_stats_top_minute " +
-		"WHERE interval_end = (SELECT MAX(interval_end) FROM spanner_sys.lock_stats_top_minute)" +
-		"ORDER BY LOCK_WAIT_SECONDS DESC"
+	query := "SELECT * FROM SPANNER_SYS.LOCK_STATS_TOP_MINUTE " +
+		"WHERE INTERVAL_END = @pullTimestamp " +
+		"ORDER BY INTERVAL_END DESC, LOCK_WAIT_SECONDS DESC"
 
 	// Labels
 	queryLabelValuesMetadata := []metadata.LabelValueMetadata{
@@ -59,7 +59,7 @@ func NewTopLockStatsMetricsMetadata() *metadata.MetricsMetadata {
 
 func NewTotalLockStatsMetricsMetadata() *metadata.MetricsMetadata {
 	query := "SELECT * FROM spanner_sys.lock_stats_total_minute " +
-		"WHERE interval_end = (SELECT MAX(interval_end) FROM spanner_sys.lock_stats_total_minute)"
+		"WHERE INTERVAL_END = @pullTimestamp"
 
 	// Labels
 	var queryLabelValuesMetadata []metadata.LabelValueMetadata

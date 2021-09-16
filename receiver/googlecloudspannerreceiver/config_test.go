@@ -74,7 +74,7 @@ func TestLoadConfig(t *testing.T) {
 }
 
 func TestValidateInstance(t *testing.T) {
-	var testsCases = map[string]struct {
+	testCases := map[string]struct {
 		id           string
 		databases    []string
 		requireError bool
@@ -85,7 +85,7 @@ func TestValidateInstance(t *testing.T) {
 		"Databases have empty names":        {"id", []string{""}, true},
 	}
 
-	for name, testCase := range testsCases {
+	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			instance := Instance{
 				ID:        testCase.id,
@@ -109,7 +109,7 @@ func TestValidateProject(t *testing.T) {
 		Databases: []string{"name"},
 	}
 
-	var testsCases = map[string]struct {
+	testCases := map[string]struct {
 		id                string
 		serviceAccountKey string
 		instances         []Instance
@@ -119,9 +119,10 @@ func TestValidateProject(t *testing.T) {
 		"No id":                             {"", "key", []Instance{instance}, true},
 		"No service account key":            {"id", "", []Instance{instance}, true},
 		"No instances":                      {"id", "key", nil, true},
+		"Invalid instance in instances":     {"id", "key", []Instance{{}}, true},
 	}
 
-	for name, testCase := range testsCases {
+	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			project := Project{
 				ID:                testCase.id,
@@ -152,7 +153,7 @@ func TestValidateConfig(t *testing.T) {
 		Instances:         []Instance{instance},
 	}
 
-	var testsCases = map[string]struct {
+	testCases := map[string]struct {
 		collectionInterval     time.Duration
 		topMetricsQueryMaxRows int
 		projects               []Project
@@ -162,10 +163,11 @@ func TestValidateConfig(t *testing.T) {
 		"Invalid collection interval":                         {-1, defaultTopMetricsQueryMaxRows, []Project{project}, true},
 		"Invalid top metrics query max rows":                  {defaultCollectionInterval, -1, []Project{project}, true},
 		"Top metrics query max rows greater than max allowed": {defaultCollectionInterval, defaultTopMetricsQueryMaxRows + 1, []Project{project}, true},
-		"No projects": {defaultCollectionInterval, defaultTopMetricsQueryMaxRows, nil, true},
+		"No projects":                 {defaultCollectionInterval, defaultTopMetricsQueryMaxRows, nil, true},
+		"Invalid project in projects": {defaultCollectionInterval, defaultTopMetricsQueryMaxRows, []Project{{}}, true},
 	}
 
-	for name, testCase := range testsCases {
+	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			cfg := &Config{
 				ScraperControllerSettings: scraperhelper.ScraperControllerSettings{

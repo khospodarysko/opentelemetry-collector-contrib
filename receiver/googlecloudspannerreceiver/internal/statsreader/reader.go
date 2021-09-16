@@ -12,23 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package datasource
+package statsreader
 
 import (
 	"context"
-	"testing"
 
-	"cloud.google.com/go/spanner"
-	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/collector/model/pdata"
 )
 
-func TestNewMetricsSourceFromClient(t *testing.T) {
-	ctx := context.Background()
-	client, _ := spanner.NewClient(ctx, "")
-	metricsSourceId := metricsSourceId()
+type ReaderConfig struct {
+	TopMetricsQueryMaxRows int
+	BackFillEnabled        bool
+}
 
-	metricsSource := NewMetricsSourceFromClient(client, metricsSourceId)
-
-	assert.Equal(t, client, metricsSource.Client())
-	assert.Equal(t, metricsSourceId, metricsSource.MetricsSourceId())
+type Reader interface {
+	Name() string
+	Read(ctx context.Context) ([]pdata.Metrics, error)
 }

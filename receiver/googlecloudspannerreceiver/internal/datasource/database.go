@@ -21,40 +21,39 @@ import (
 	"google.golang.org/api/option"
 )
 
-type MetricsSource struct {
-	client          *spanner.Client
-	metricsSourceId *MetricsSourceId
+type Database struct {
+	client     *spanner.Client
+	databaseId *DatabaseId
 }
 
-func (metricsSource *MetricsSource) Client() *spanner.Client {
-	return metricsSource.client
+func (database *Database) Client() *spanner.Client {
+	return database.client
 }
 
-func (metricsSource *MetricsSource) MetricsSourceId() *MetricsSourceId {
-	return metricsSource.metricsSourceId
+func (database *Database) DatabaseId() *DatabaseId {
+	return database.databaseId
 }
 
-func NewMetricsSource(ctx context.Context, metricsSourceId *MetricsSourceId,
-	credentialsFilePath string) (*MetricsSource, error) {
+func NewDatabase(ctx context.Context, databaseId *DatabaseId, credentialsFilePath string) (*Database, error) {
 
 	credentialsFileClientOption := option.WithCredentialsFile(credentialsFilePath)
-	client, err := spanner.NewClient(ctx, metricsSourceId.Id(), credentialsFileClientOption)
+	client, err := spanner.NewClient(ctx, databaseId.Id(), credentialsFileClientOption)
 
 	if err != nil {
 		return nil, err
 	}
 
-	metricsSource := &MetricsSource{
-		client:          client,
-		metricsSourceId: metricsSourceId,
+	database := &Database{
+		client:     client,
+		databaseId: databaseId,
 	}
 
-	return metricsSource, nil
+	return database, nil
 }
 
-func NewMetricsSourceFromClient(client *spanner.Client, metricsSourceId *MetricsSourceId) *MetricsSource {
-	return &MetricsSource{
-		client:          client,
-		metricsSourceId: metricsSourceId,
+func NewDatabaseFromClient(client *spanner.Client, databaseId *DatabaseId) *Database {
+	return &Database{
+		client:     client,
+		databaseId: databaseId,
 	}
 }

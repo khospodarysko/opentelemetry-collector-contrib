@@ -14,15 +14,15 @@
 
 package datasource
 
-type MetricsSourceId struct {
+type DatabaseId struct {
 	projectId    string
 	instanceId   string
 	databaseName string
 	id           string
 }
 
-func NewMetricsSourceId(projectId string, instanceId string, databaseName string) *MetricsSourceId {
-	return &MetricsSourceId{
+func NewDatabaseId(projectId string, instanceId string, databaseName string) *DatabaseId {
+	return &DatabaseId{
 		projectId:    projectId,
 		instanceId:   instanceId,
 		databaseName: databaseName,
@@ -30,17 +30,17 @@ func NewMetricsSourceId(projectId string, instanceId string, databaseName string
 	}
 }
 
-func (metricsSourceId *MetricsSourceId) ProjectId() string {
-	return metricsSourceId.projectId
+func (databaseId *DatabaseId) ProjectId() string {
+	return databaseId.projectId
 }
 
-func (metricsSourceId *MetricsSourceId) InstanceId() string {
-	return metricsSourceId.instanceId
+func (databaseId *DatabaseId) InstanceId() string {
+	return databaseId.instanceId
 }
 
-func (metricsSourceId *MetricsSourceId) DatabaseName() string {
-	return metricsSourceId.databaseName
+func (databaseId *DatabaseId) DatabaseName() string {
+	return databaseId.databaseName
 }
-func (metricsSourceId *MetricsSourceId) Id() string {
-	return metricsSourceId.id
+func (databaseId *DatabaseId) Id() string {
+	return databaseId.id
 }

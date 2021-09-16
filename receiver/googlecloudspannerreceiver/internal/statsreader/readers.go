@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package reader
+package statsreader
 
 import (
 	"go.uber.org/zap"
@@ -23,82 +23,82 @@ import (
 
 /* ---------- Active Queries Summary Stats ---------------------------------------------------------------------------*/
 
-func NewActiveQueriesSummaryMetricsReader(logger *zap.Logger, metricsSource *datasource.MetricsSource) *MetricsReader {
+func newActiveQueriesSummaryReader(logger *zap.Logger, database *datasource.Database) Reader {
 	metricsMetadata := statsmetadata.MetricsMetadataHolder().MetricsMetadata(
 		statsmetadata.MetricsMetadataTypeActiveQueriesSummary)
 
-	return NewMetricsReader(logger, metricsSource, metricsMetadata)
+	return newCurrentStatsReader(logger, database, metricsMetadata)
 }
 
 /* ---------- Lock Stats ---------------------------------------------------------------------------------------------*/
 
-func NewTopLockStatsMetricsReader(logger *zap.Logger, metricsSource *datasource.MetricsSource,
-	topMetricsQueryMaxRows int) *MetricsReader {
+func newTopLockStatsReader(logger *zap.Logger, database *datasource.Database, config ReaderConfig) Reader {
 
 	metricsMetadata := statsmetadata.MetricsMetadataHolder().MetricsMetadata(
 		statsmetadata.MetricsMetadataTypeLockStatsTop)
 
-	return NewMetricsReaderWithMaxRowsLimit(logger, metricsSource, metricsMetadata, topMetricsQueryMaxRows)
+	return newIntervalStatsReaderWithMaxRowsLimit(logger, database, metricsMetadata,
+		config.BackFillEnabled, config.TopMetricsQueryMaxRows)
 }
 
-func NewTotalLockStatsMetricsReader(logger *zap.Logger, metricsSource *datasource.MetricsSource) *MetricsReader {
+func newTotalLockStatsReader(logger *zap.Logger, database *datasource.Database, config ReaderConfig) Reader {
 	metricsMetadata := statsmetadata.MetricsMetadataHolder().MetricsMetadata(
 		statsmetadata.MetricsMetadataTypeLockStatsTotal)
 
-	return NewMetricsReader(logger, metricsSource, metricsMetadata)
+	return newIntervalStatsReader(logger, database, metricsMetadata, config.BackFillEnabled)
 }
 
 /* ---------- Query Stats --------------------------------------------------------------------------------------------*/
 
-func NewTopQueryStatsMetricsReader(logger *zap.Logger, metricsSource *datasource.MetricsSource,
-	topMetricsQueryMaxRows int) *MetricsReader {
+func newTopQueryStatsReader(logger *zap.Logger, database *datasource.Database, config ReaderConfig) Reader {
 
 	metricsMetadata := statsmetadata.MetricsMetadataHolder().MetricsMetadata(
 		statsmetadata.MetricsMetadataTypeQueryStatsTop)
 
-	return NewMetricsReaderWithMaxRowsLimit(logger, metricsSource, metricsMetadata, topMetricsQueryMaxRows)
+	return newIntervalStatsReaderWithMaxRowsLimit(logger, database, metricsMetadata,
+		config.BackFillEnabled, config.TopMetricsQueryMaxRows)
 }
 
-func NewTotalQueryStatsMetricsReader(logger *zap.Logger, metricsSource *datasource.MetricsSource) *MetricsReader {
+func newTotalQueryStatsReader(logger *zap.Logger, database *datasource.Database, config ReaderConfig) Reader {
 
 	metricsMetadata := statsmetadata.MetricsMetadataHolder().MetricsMetadata(
 		statsmetadata.MetricsMetadataTypeQueryStatsTotal)
 
-	return NewMetricsReader(logger, metricsSource, metricsMetadata)
+	return newIntervalStatsReader(logger, database, metricsMetadata, config.BackFillEnabled)
 }
 
 /* ---------- Read Stats ---------------------------------------------------------------------------------------------*/
 
-func NewTopReadStatsMetricsReader(logger *zap.Logger, metricsSource *datasource.MetricsSource,
-	topMetricsQueryMaxRows int) *MetricsReader {
+func newTopReadStatsReader(logger *zap.Logger, database *datasource.Database, config ReaderConfig) Reader {
 
 	metricsMetadata := statsmetadata.MetricsMetadataHolder().MetricsMetadata(
 		statsmetadata.MetricsMetadataTypeReadStatsTop)
 
-	return NewMetricsReaderWithMaxRowsLimit(logger, metricsSource, metricsMetadata, topMetricsQueryMaxRows)
+	return newIntervalStatsReaderWithMaxRowsLimit(logger, database, metricsMetadata,
+		config.BackFillEnabled, config.TopMetricsQueryMaxRows)
 }
 
-func NewTotalReadStatsMetricsReader(logger *zap.Logger, metricsSource *datasource.MetricsSource) *MetricsReader {
+func newTotalReadStatsReader(logger *zap.Logger, database *datasource.Database, config ReaderConfig) Reader {
 	metricsMetadata := statsmetadata.MetricsMetadataHolder().MetricsMetadata(
 		statsmetadata.MetricsMetadataTypeReadStatsTotal)
 
-	return NewMetricsReader(logger, metricsSource, metricsMetadata)
+	return newIntervalStatsReader(logger, database, metricsMetadata, config.BackFillEnabled)
 }
 
 /* ---------- Transaction Stats --------------------------------------------------------------------------------------*/
 
-func NewTopTransactionStatsMetricsReader(logger *zap.Logger, metricsSource *datasource.MetricsSource,
-	topMetricsQueryMaxRows int) *MetricsReader {
+func newTopTransactionStatsReader(logger *zap.Logger, database *datasource.Database, config ReaderConfig) Reader {
 
 	metricsMetadata := statsmetadata.MetricsMetadataHolder().MetricsMetadata(
 		statsmetadata.MetricsMetadataTypeTransactionStatsTop)
 
-	return NewMetricsReaderWithMaxRowsLimit(logger, metricsSource, metricsMetadata, topMetricsQueryMaxRows)
+	return newIntervalStatsReaderWithMaxRowsLimit(logger, database, metricsMetadata,
+		config.BackFillEnabled, config.TopMetricsQueryMaxRows)
 }
 
-func NewTotalTransactionStatsMetricsReader(logger *zap.Logger, metricsSource *datasource.MetricsSource) *MetricsReader {
+func newTotalTransactionStatsReader(logger *zap.Logger, database *datasource.Database, config ReaderConfig) Reader {
 	metricsMetadata := statsmetadata.MetricsMetadataHolder().MetricsMetadata(
 		statsmetadata.MetricsMetadataTypeTransactionStatsTotal)
 
-	return NewMetricsReader(logger, metricsSource, metricsMetadata)
+	return newIntervalStatsReader(logger, database, metricsMetadata, config.BackFillEnabled)
 }

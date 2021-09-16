@@ -26,19 +26,19 @@ const (
 	databaseName = "DatabaseName"
 )
 
-func metricsSourceId() *MetricsSourceId {
-	return NewMetricsSourceId(projectId, instanceId, databaseName)
+func databaseId() *DatabaseId {
+	return NewDatabaseId(projectId, instanceId, databaseName)
 }
 
-func TestNewMetricsSourceId(t *testing.T) {
-	metricsSourceId := metricsSourceId()
+func TestNewDatabaseId(t *testing.T) {
+	databaseId := databaseId()
 
-	assert.Equal(t, projectId, metricsSourceId.projectId)
-	assert.Equal(t, instanceId, metricsSourceId.instanceId)
-	assert.Equal(t, databaseName, metricsSourceId.databaseName)
-	assert.Equal(t, "projects/"+projectId+"/instances/"+instanceId+"/databases/"+databaseName, metricsSourceId.id)
-	assert.Equal(t, projectId, metricsSourceId.ProjectId())
-	assert.Equal(t, instanceId, metricsSourceId.InstanceId())
-	assert.Equal(t, databaseName, metricsSourceId.DatabaseName())
-	assert.Equal(t, "projects/"+projectId+"/instances/"+instanceId+"/databases/"+databaseName, metricsSourceId.Id())
+	assert.Equal(t, projectId, databaseId.projectId)
+	assert.Equal(t, instanceId, databaseId.instanceId)
+	assert.Equal(t, databaseName, databaseId.databaseName)
+	assert.Equal(t, "projects/"+projectId+"/instances/"+instanceId+"/databases/"+databaseName, databaseId.id)
+	assert.Equal(t, projectId, databaseId.ProjectId())
+	assert.Equal(t, instanceId, databaseId.InstanceId())
+	assert.Equal(t, databaseName, databaseId.DatabaseName())
+	assert.Equal(t, "projects/"+projectId+"/instances/"+instanceId+"/databases/"+databaseName, databaseId.Id())
 }

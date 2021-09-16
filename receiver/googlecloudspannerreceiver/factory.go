@@ -28,7 +28,7 @@ import (
 const (
 	typeStr = "googlecloudspanner"
 
-	defaultCollectionInterval = 60 * time.Second
+	defaultCollectionInterval     = 60 * time.Second
 	defaultTopMetricsQueryMaxRows = 100
 )
 
