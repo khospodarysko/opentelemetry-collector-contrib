@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/component/componenterror"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/model/pdata"
 	"go.uber.org/zap"
@@ -35,13 +36,17 @@ type googleCloudSpannerReceiver struct {
 	nextConsumer   consumer.Metrics
 	config         *Config
 	cancel         context.CancelFunc
-	projectReaders []*statsreader.ProjectReader
+	projectReaders []statsreader.CompositeReader
 }
 
 func newGoogleCloudSpannerReceiver(
 	logger *zap.Logger,
 	config *Config,
 	nextConsumer consumer.Metrics) (component.MetricsReceiver, error) {
+
+	if nextConsumer == nil {
+		return nil, componenterror.ErrNilNextConsumer
+	}
 
 	r := &googleCloudSpannerReceiver{
 		logger:       logger,
@@ -67,7 +72,7 @@ func (receiver *googleCloudSpannerReceiver) Start(ctx context.Context, host comp
 			select {
 			case <-ticker.C:
 				if err := receiver.collectData(ctx); err != nil {
-					receiver.logger.Error(fmt.Sprintf("Error occurred during data collection %v", err))
+					// Ignoring this error because it has been already logged inside collectData
 				}
 			case <-ctx.Done():
 				return
@@ -89,43 +94,38 @@ func (receiver *googleCloudSpannerReceiver) Shutdown(context.Context) error {
 }
 
 func (receiver *googleCloudSpannerReceiver) initializeProjectReaders(ctx context.Context) error {
-	receiver.projectReaders = make([]*statsreader.ProjectReader, len(receiver.config.Projects))
-
 	readerConfig := statsreader.ReaderConfig{
-		// TODO Add real configuration parameter setter
-		BackFillEnabled:        false,
+		BackfillEnabled:        receiver.config.BackfillEnabled,
 		TopMetricsQueryMaxRows: receiver.config.TopMetricsQueryMaxRows,
 	}
 
-	for i, project := range receiver.config.Projects {
-		projectReader, err := newProjectMetricsReader(project, readerConfig, ctx, receiver.logger)
-
+	for _, project := range receiver.config.Projects {
+		projectReader, err := newProjectReader(project, readerConfig, ctx, receiver.logger)
 		if err != nil {
 			return err
 		}
 
-		receiver.projectReaders[i] = projectReader
+		receiver.projectReaders = append(receiver.projectReaders, projectReader)
 	}
 
 	return nil
 }
 
-func newProjectMetricsReader(project Project, readerConfig statsreader.ReaderConfig, ctx context.Context,
+func newProjectReader(project Project, readerConfig statsreader.ReaderConfig, ctx context.Context,
 	logger *zap.Logger) (*statsreader.ProjectReader, error) {
 	logger.Info(fmt.Sprintf("Constructing project reader for project id %v", project.ID))
 
-	var databaseReaders []*statsreader.DatabaseReader
+	var databaseReaders []statsreader.CompositeReader
 
 	for _, instance := range project.Instances {
 		for _, database := range instance.Databases {
 			logger.Info(fmt.Sprintf("Constructing database reader for project id %v, instance id %v, database %v",
 				project.ID, instance.ID, database))
 
-			databaseId := datasource.NewDatabaseId(project.ID, instance.ID, database)
+			databaseID := datasource.NewDatabaseID(project.ID, instance.ID, database)
 
-			databaseReader, err := statsreader.NewDatabaseReader(ctx, databaseId,
+			databaseReader, err := statsreader.NewDatabaseReader(ctx, databaseID,
 				project.ServiceAccountKey, readerConfig, logger)
-
 			if err != nil {
 				return nil, err
 			}

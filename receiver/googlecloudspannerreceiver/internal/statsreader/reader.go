@@ -22,10 +22,16 @@ import (
 
 type ReaderConfig struct {
 	TopMetricsQueryMaxRows int
-	BackFillEnabled        bool
+	BackfillEnabled        bool
 }
 
 type Reader interface {
 	Name() string
 	Read(ctx context.Context) ([]pdata.Metrics, error)
+}
+
+type CompositeReader interface {
+	Name() string
+	Read(ctx context.Context) []pdata.Metrics
+	Shutdown()
 }

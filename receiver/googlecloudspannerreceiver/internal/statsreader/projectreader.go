@@ -17,17 +17,18 @@ package statsreader
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"go.opentelemetry.io/collector/model/pdata"
 	"go.uber.org/zap"
 )
 
 type ProjectReader struct {
-	databaseReaders []*DatabaseReader
+	databaseReaders []CompositeReader
 	logger          *zap.Logger
 }
 
-func NewProjectReader(databaseReaders []*DatabaseReader, logger *zap.Logger) *ProjectReader {
+func NewProjectReader(databaseReaders []CompositeReader, logger *zap.Logger) *ProjectReader {
 	return &ProjectReader{
 		databaseReaders: databaseReaders,
 		logger:          logger,
@@ -37,7 +38,7 @@ func NewProjectReader(databaseReaders []*DatabaseReader, logger *zap.Logger) *Pr
 func (projectReader *ProjectReader) Shutdown() {
 	for _, databaseReader := range projectReader.databaseReaders {
 		projectReader.logger.Info(fmt.Sprintf("Shutting down projectReader for database %v",
-			databaseReader.database.DatabaseId().Id()))
+			databaseReader.Name()))
 		databaseReader.Shutdown()
 	}
 }
@@ -50,4 +51,14 @@ func (projectReader *ProjectReader) Read(ctx context.Context) []pdata.Metrics {
 	}
 
 	return projectMetrics
+}
+
+func (projectReader *ProjectReader) Name() string {
+	var databaseReaderNames []string
+
+	for _, databaseReader := range projectReader.databaseReaders {
+		databaseReaderNames = append(databaseReaderNames, databaseReader.Name())
+	}
+
+	return "Project reader for: " + strings.Join(databaseReaderNames, ",")
 }

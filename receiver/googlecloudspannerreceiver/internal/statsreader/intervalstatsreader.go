@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"time"
 
+	"cloud.google.com/go/spanner"
 	"go.opentelemetry.io/collector/model/pdata"
 	"go.uber.org/zap"
 
@@ -27,52 +28,32 @@ import (
 )
 
 const (
-	backFillIntervalDuration = time.Hour
+	backfillIntervalDuration = time.Hour
 )
 
 type intervalStatsReader struct {
 	currentStatsReader
-	backFillEnabled   bool
+	backfillEnabled   bool
 	lastPullTimestamp time.Time
-}
-
-func newIntervalStatsReaderWithMaxRowsLimit(
-	logger *zap.Logger,
-	database *datasource.Database,
-	metricsMetadata *metadata.MetricsMetadata,
-	backFillEnabled bool,
-	topMetricsQueryMaxRows int) *intervalStatsReader {
-
-	reader := currentStatsReader{
-		logger:                 logger,
-		database:               database,
-		metricsMetadata:        metricsMetadata,
-		topMetricsQueryMaxRows: topMetricsQueryMaxRows,
-		statement:              intervalStatsStatement,
-	}
-
-	return &intervalStatsReader{
-		currentStatsReader: reader,
-		backFillEnabled:    backFillEnabled,
-	}
 }
 
 func newIntervalStatsReader(
 	logger *zap.Logger,
 	database *datasource.Database,
 	metricsMetadata *metadata.MetricsMetadata,
-	backFillEnabled bool) *intervalStatsReader {
+	config ReaderConfig) *intervalStatsReader {
 
 	reader := currentStatsReader{
-		logger:          logger,
-		database:        database,
-		metricsMetadata: metricsMetadata,
-		statement:       intervalStatsStatement,
+		logger:                 logger,
+		database:               database,
+		metricsMetadata:        metricsMetadata,
+		statement:              intervalStatsStatement,
+		topMetricsQueryMaxRows: config.TopMetricsQueryMaxRows,
 	}
 
 	return &intervalStatsReader{
 		currentStatsReader: reader,
-		backFillEnabled:    backFillEnabled,
+		backfillEnabled:    config.BackfillEnabled,
 	}
 }
 
@@ -80,19 +61,13 @@ func (reader *intervalStatsReader) Read(ctx context.Context) ([]pdata.Metrics, e
 	reader.logger.Info(fmt.Sprintf("Executing read method for reader %v", reader.Name()))
 
 	// Generating pull timestamps
-	pullTimestamps := pullTimestamps(reader.lastPullTimestamp, reader.backFillEnabled)
+	pullTimestamps := pullTimestamps(reader.lastPullTimestamp, reader.backfillEnabled)
 
 	var collectedMetrics []pdata.Metrics
 
 	// Pulling metrics for each generated pull timestamp
 	for _, pullTimestamp := range pullTimestamps {
-		stmtArgs := statementArgs{
-			query:                  reader.metricsMetadata.Query,
-			topMetricsQueryMaxRows: reader.topMetricsQueryMaxRows,
-			pullTimestamp:          pullTimestamp,
-		}
-
-		stmt := reader.statement(stmtArgs)
+		stmt := reader.newPullStatement(pullTimestamp)
 		metrics, err := reader.pull(ctx, stmt)
 
 		if err != nil {
@@ -107,14 +82,24 @@ func (reader *intervalStatsReader) Read(ctx context.Context) ([]pdata.Metrics, e
 	return collectedMetrics, nil
 }
 
+func (reader *intervalStatsReader) newPullStatement(pullTimestamp time.Time) spanner.Statement {
+	args := statementArgs{
+		query:                  reader.metricsMetadata.Query,
+		topMetricsQueryMaxRows: reader.topMetricsQueryMaxRows,
+		pullTimestamp:          pullTimestamp,
+	}
+
+	return reader.statement(args)
+}
+
 // This slice will always contain at least one value.
-func pullTimestamps(lastPullTimestamp time.Time, backFillEnabled bool) []time.Time {
+func pullTimestamps(lastPullTimestamp time.Time, backfillEnabled bool) []time.Time {
 	var timestamps []time.Time
 	upperBound := nowAtStartOfMinute()
 
 	if lastPullTimestamp.IsZero() {
-		if backFillEnabled {
-			timestamps = pullTimestampsWithMinuteDifference(upperBound.Add(-1*backFillIntervalDuration), upperBound)
+		if backfillEnabled {
+			timestamps = pullTimestampsWithMinuteDifference(upperBound.Add(-1*backfillIntervalDuration), upperBound)
 		} else {
 			timestamps = []time.Time{upperBound}
 		}

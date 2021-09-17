@@ -27,20 +27,20 @@ import (
 )
 
 const (
-	projectId    = "ProjectId"
-	instanceId   = "InstanceId"
+	projectID    = "ProjectID"
+	instanceID   = "InstanceID"
 	databaseName = "DatabaseName"
+
+	name = "name"
 )
 
 func TestCurrentStatsReader_Name(t *testing.T) {
-	databaseId := datasource.NewDatabaseId(projectId, instanceId, databaseName)
+	databaseID := datasource.NewDatabaseID(projectID, instanceID, databaseName)
 	ctx := context.Background()
 	client, _ := spanner.NewClient(ctx, "")
-
-	database := datasource.NewDatabaseFromClient(client, databaseId)
-
+	database := datasource.NewDatabaseFromClient(client, databaseID)
 	metricsMetadata := &metadata.MetricsMetadata{
-		Name: "name",
+		Name: name,
 	}
 
 	reader := currentStatsReader{
@@ -48,24 +48,24 @@ func TestCurrentStatsReader_Name(t *testing.T) {
 		metricsMetadata: metricsMetadata,
 	}
 
-	assert.Equal(t, reader.metricsMetadata.Name+" "+databaseId.ProjectId()+"::"+
-		databaseId.InstanceId()+"::"+databaseId.DatabaseName(), reader.Name())
+	assert.Equal(t, reader.metricsMetadata.Name+" "+databaseID.ProjectID()+"::"+
+		databaseID.InstanceID()+"::"+databaseID.DatabaseName(), reader.Name())
 }
 
-func TestNewCurrentStatsReaderWithMaxRowsLimit(t *testing.T) {
-	databaseId := datasource.NewDatabaseId(projectId, instanceId, databaseName)
+func TestNewCurrentStatsReader(t *testing.T) {
+	databaseID := datasource.NewDatabaseID(projectID, instanceID, databaseName)
 	ctx := context.Background()
 	client, _ := spanner.NewClient(ctx, "")
-
-	database := datasource.NewDatabaseFromClient(client, databaseId)
-
+	database := datasource.NewDatabaseFromClient(client, databaseID)
 	metricsMetadata := &metadata.MetricsMetadata{
-		Name: "name",
+		Name: name,
+	}
+	logger := zap.NewNop()
+	config := ReaderConfig{
+		TopMetricsQueryMaxRows: topMetricsQueryMaxRows,
 	}
 
-	logger := zap.NewNop()
-
-	reader := newCurrentStatsReaderWithMaxRowsLimit(logger, database, metricsMetadata, topMetricsQueryMaxRows)
+	reader := newCurrentStatsReader(logger, database, metricsMetadata, config)
 
 	assert.Equal(t, database, reader.database)
 	assert.Equal(t, logger, reader.logger)
@@ -73,23 +73,16 @@ func TestNewCurrentStatsReaderWithMaxRowsLimit(t *testing.T) {
 	assert.Equal(t, topMetricsQueryMaxRows, reader.topMetricsQueryMaxRows)
 }
 
-func TestNewCurrentStatsReader(t *testing.T) {
-	databaseId := datasource.NewDatabaseId(projectId, instanceId, databaseName)
-	ctx := context.Background()
-	client, _ := spanner.NewClient(ctx, "")
-
-	database := datasource.NewDatabaseFromClient(client, databaseId)
-
+func TestCurrentStatsReader_NewPullStatement(t *testing.T) {
 	metricsMetadata := &metadata.MetricsMetadata{
-		Name: "name",
+		Query: query,
 	}
 
-	logger := zap.NewNop()
+	reader := currentStatsReader{
+		metricsMetadata:        metricsMetadata,
+		topMetricsQueryMaxRows: topMetricsQueryMaxRows,
+		statement:              currentStatsStatement,
+	}
 
-	reader := newCurrentStatsReader(logger, database, metricsMetadata)
-
-	assert.Equal(t, database, reader.database)
-	assert.Equal(t, logger, reader.logger)
-	assert.Equal(t, metricsMetadata, reader.metricsMetadata)
-	assert.Equal(t, 0, reader.topMetricsQueryMaxRows)
+	assert.NotZero(t, reader.newPullStatement())
 }

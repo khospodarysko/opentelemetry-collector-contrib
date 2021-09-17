@@ -30,6 +30,7 @@ const (
 
 	defaultCollectionInterval     = 60 * time.Second
 	defaultTopMetricsQueryMaxRows = 100
+	defaultBackfillEnabled        = false
 )
 
 func NewFactory() component.ReceiverFactory {
@@ -46,6 +47,7 @@ func createDefaultConfig() config.Receiver {
 			CollectionInterval: defaultCollectionInterval,
 		},
 		TopMetricsQueryMaxRows: defaultTopMetricsQueryMaxRows,
+		BackfillEnabled:        defaultBackfillEnabled,
 	}
 }
 

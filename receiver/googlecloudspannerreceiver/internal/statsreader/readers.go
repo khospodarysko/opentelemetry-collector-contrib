@@ -27,7 +27,7 @@ func newActiveQueriesSummaryReader(logger *zap.Logger, database *datasource.Data
 	metricsMetadata := statsmetadata.MetricsMetadataHolder().MetricsMetadata(
 		statsmetadata.MetricsMetadataTypeActiveQueriesSummary)
 
-	return newCurrentStatsReader(logger, database, metricsMetadata)
+	return newCurrentStatsReader(logger, database, metricsMetadata, ReaderConfig{})
 }
 
 /* ---------- Lock Stats ---------------------------------------------------------------------------------------------*/
@@ -37,15 +37,14 @@ func newTopLockStatsReader(logger *zap.Logger, database *datasource.Database, co
 	metricsMetadata := statsmetadata.MetricsMetadataHolder().MetricsMetadata(
 		statsmetadata.MetricsMetadataTypeLockStatsTop)
 
-	return newIntervalStatsReaderWithMaxRowsLimit(logger, database, metricsMetadata,
-		config.BackFillEnabled, config.TopMetricsQueryMaxRows)
+	return newIntervalStatsReader(logger, database, metricsMetadata, config)
 }
 
 func newTotalLockStatsReader(logger *zap.Logger, database *datasource.Database, config ReaderConfig) Reader {
 	metricsMetadata := statsmetadata.MetricsMetadataHolder().MetricsMetadata(
 		statsmetadata.MetricsMetadataTypeLockStatsTotal)
 
-	return newIntervalStatsReader(logger, database, metricsMetadata, config.BackFillEnabled)
+	return newIntervalStatsReader(logger, database, metricsMetadata, config)
 }
 
 /* ---------- Query Stats --------------------------------------------------------------------------------------------*/
@@ -55,8 +54,7 @@ func newTopQueryStatsReader(logger *zap.Logger, database *datasource.Database, c
 	metricsMetadata := statsmetadata.MetricsMetadataHolder().MetricsMetadata(
 		statsmetadata.MetricsMetadataTypeQueryStatsTop)
 
-	return newIntervalStatsReaderWithMaxRowsLimit(logger, database, metricsMetadata,
-		config.BackFillEnabled, config.TopMetricsQueryMaxRows)
+	return newIntervalStatsReader(logger, database, metricsMetadata, config)
 }
 
 func newTotalQueryStatsReader(logger *zap.Logger, database *datasource.Database, config ReaderConfig) Reader {
@@ -64,7 +62,7 @@ func newTotalQueryStatsReader(logger *zap.Logger, database *datasource.Database,
 	metricsMetadata := statsmetadata.MetricsMetadataHolder().MetricsMetadata(
 		statsmetadata.MetricsMetadataTypeQueryStatsTotal)
 
-	return newIntervalStatsReader(logger, database, metricsMetadata, config.BackFillEnabled)
+	return newIntervalStatsReader(logger, database, metricsMetadata, config)
 }
 
 /* ---------- Read Stats ---------------------------------------------------------------------------------------------*/
@@ -74,15 +72,14 @@ func newTopReadStatsReader(logger *zap.Logger, database *datasource.Database, co
 	metricsMetadata := statsmetadata.MetricsMetadataHolder().MetricsMetadata(
 		statsmetadata.MetricsMetadataTypeReadStatsTop)
 
-	return newIntervalStatsReaderWithMaxRowsLimit(logger, database, metricsMetadata,
-		config.BackFillEnabled, config.TopMetricsQueryMaxRows)
+	return newIntervalStatsReader(logger, database, metricsMetadata, config)
 }
 
 func newTotalReadStatsReader(logger *zap.Logger, database *datasource.Database, config ReaderConfig) Reader {
 	metricsMetadata := statsmetadata.MetricsMetadataHolder().MetricsMetadata(
 		statsmetadata.MetricsMetadataTypeReadStatsTotal)
 
-	return newIntervalStatsReader(logger, database, metricsMetadata, config.BackFillEnabled)
+	return newIntervalStatsReader(logger, database, metricsMetadata, config)
 }
 
 /* ---------- Transaction Stats --------------------------------------------------------------------------------------*/
@@ -92,13 +89,12 @@ func newTopTransactionStatsReader(logger *zap.Logger, database *datasource.Datab
 	metricsMetadata := statsmetadata.MetricsMetadataHolder().MetricsMetadata(
 		statsmetadata.MetricsMetadataTypeTransactionStatsTop)
 
-	return newIntervalStatsReaderWithMaxRowsLimit(logger, database, metricsMetadata,
-		config.BackFillEnabled, config.TopMetricsQueryMaxRows)
+	return newIntervalStatsReader(logger, database, metricsMetadata, config)
 }
 
 func newTotalTransactionStatsReader(logger *zap.Logger, database *datasource.Database, config ReaderConfig) Reader {
 	metricsMetadata := statsmetadata.MetricsMetadataHolder().MetricsMetadata(
 		statsmetadata.MetricsMetadataTypeTransactionStatsTotal)
 
-	return newIntervalStatsReader(logger, database, metricsMetadata, config.BackFillEnabled)
+	return newIntervalStatsReader(logger, database, metricsMetadata, config)
 }

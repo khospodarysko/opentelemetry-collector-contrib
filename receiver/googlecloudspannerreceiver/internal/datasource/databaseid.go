@@ -14,33 +14,33 @@
 
 package datasource
 
-type DatabaseId struct {
-	projectId    string
-	instanceId   string
+type DatabaseID struct {
+	projectID    string
+	instanceID   string
 	databaseName string
 	id           string
 }
 
-func NewDatabaseId(projectId string, instanceId string, databaseName string) *DatabaseId {
-	return &DatabaseId{
-		projectId:    projectId,
-		instanceId:   instanceId,
+func NewDatabaseID(projectID string, instanceID string, databaseName string) *DatabaseID {
+	return &DatabaseID{
+		projectID:    projectID,
+		instanceID:   instanceID,
 		databaseName: databaseName,
-		id:           "projects/" + projectId + "/instances/" + instanceId + "/databases/" + databaseName,
+		id:           "projects/" + projectID + "/instances/" + instanceID + "/databases/" + databaseName,
 	}
 }
 
-func (databaseId *DatabaseId) ProjectId() string {
-	return databaseId.projectId
+func (databaseID *DatabaseID) ProjectID() string {
+	return databaseID.projectID
 }
 
-func (databaseId *DatabaseId) InstanceId() string {
-	return databaseId.instanceId
+func (databaseID *DatabaseID) InstanceID() string {
+	return databaseID.instanceID
 }
 
-func (databaseId *DatabaseId) DatabaseName() string {
-	return databaseId.databaseName
+func (databaseID *DatabaseID) DatabaseName() string {
+	return databaseID.databaseName
 }
-func (databaseId *DatabaseId) Id() string {
-	return databaseId.id
+func (databaseID *DatabaseID) ID() string {
+	return databaseID.id
 }

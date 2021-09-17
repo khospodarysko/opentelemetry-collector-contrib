@@ -25,8 +25,8 @@ import (
 )
 
 const (
-	projectIdLabelName  = "project_id"
-	instanceIdLabelName = "instance_id"
+	projectIDLabelName  = "project_id"
+	instanceIDLabelName = "instance_id"
 	databaseLabelName   = "database"
 )
 
@@ -41,15 +41,11 @@ type MetricsMetadata struct {
 }
 
 func (metadata *MetricsMetadata) timestamp(row *spanner.Row) (time.Time, error) {
-	var timestamp time.Time
-	var err error
-
-	if metadata.TimestampColumnName != "" {
-		err = row.ColumnByName(metadata.TimestampColumnName, &timestamp)
-	} else {
-		timestamp = time.Now().UTC()
+	if metadata.TimestampColumnName == "" {
+		return time.Now().UTC(), nil
 	}
-
+	var timestamp time.Time
+	err := row.ColumnByName(metadata.TimestampColumnName, &timestamp)
 	return timestamp, err
 }
 
@@ -71,6 +67,9 @@ func toLabelValue(labelValueMetadata LabelValueMetadata, row *spanner.Row) (Labe
 	valueHolder := labelValueMetadata.ValueHolder()
 
 	err := row.ColumnByName(labelValueMetadata.ColumnName(), valueHolder)
+	if err != nil {
+		return nil, err
+	}
 
 	var value LabelValue = nil
 
@@ -87,7 +86,7 @@ func toLabelValue(labelValueMetadata LabelValueMetadata, row *spanner.Row) (Labe
 		value = NewByteSliceLabelValue(labelValueMetadataCasted, valueHolder)
 	}
 
-	return value, err
+	return value, nil
 }
 
 func (metadata *MetricsMetadata) toMetricValues(row *spanner.Row) ([]MetricValue, error) {
@@ -108,6 +107,9 @@ func toMetricValue(metricValueMetadata MetricValueMetadata, row *spanner.Row) (M
 	valueHolder := metricValueMetadata.ValueHolder()
 
 	err := row.ColumnByName(metricValueMetadata.ColumnName(), valueHolder)
+	if err != nil {
+		return nil, err
+	}
 
 	var value MetricValue = nil
 
@@ -118,34 +120,31 @@ func toMetricValue(metricValueMetadata MetricValueMetadata, row *spanner.Row) (M
 		value = NewFloat64MetricValue(metricValueMetadataCasted, valueHolder)
 	}
 
-	return value, err
+	return value, nil
 }
 
-func (metadata *MetricsMetadata) RowToMetrics(metricsSourceId *datasource.DatabaseId, row *spanner.Row) ([]pdata.Metrics, error) {
+func (metadata *MetricsMetadata) RowToMetrics(databaseID *datasource.DatabaseID, row *spanner.Row) ([]pdata.Metrics, error) {
 	timestamp, err := metadata.timestamp(row)
-
 	if err != nil {
 		return nil, fmt.Errorf("error occurred during extracting timestamp %v", err)
 	}
 
 	// Reading labels
 	labelValues, err := metadata.toLabelValues(row)
-
 	if err != nil {
 		return nil, fmt.Errorf("error occurred during extracting label values for row: %v", err)
 	}
 
 	// Reading metrics
 	metricValues, err := metadata.toMetricValues(row)
-
 	if err != nil {
 		return nil, fmt.Errorf("error occurred during extracting metric values row: %v", err)
 	}
 
-	return metadata.toMetrics(metricsSourceId, timestamp, labelValues, metricValues), nil
+	return metadata.toMetrics(databaseID, timestamp, labelValues, metricValues), nil
 }
 
-func (metadata *MetricsMetadata) toMetrics(databaseId *datasource.DatabaseId, timestamp time.Time,
+func (metadata *MetricsMetadata) toMetrics(databaseID *datasource.DatabaseID, timestamp time.Time,
 	labelValues []LabelValue, metricValues []MetricValue) []pdata.Metrics {
 
 	var metrics []pdata.Metrics
@@ -197,9 +196,9 @@ func (metadata *MetricsMetadata) toMetrics(databaseId *datasource.DatabaseId, ti
 			}
 		}
 
-		dataPoint.Attributes().InsertString(projectIdLabelName, databaseId.ProjectId())
-		dataPoint.Attributes().InsertString(instanceIdLabelName, databaseId.InstanceId())
-		dataPoint.Attributes().InsertString(databaseLabelName, databaseId.DatabaseName())
+		dataPoint.Attributes().InsertString(projectIDLabelName, databaseID.ProjectID())
+		dataPoint.Attributes().InsertString(instanceIDLabelName, databaseID.InstanceID())
+		dataPoint.Attributes().InsertString(databaseLabelName, databaseID.DatabaseName())
 
 		metrics = append(metrics, md)
 	}

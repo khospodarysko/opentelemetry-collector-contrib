@@ -35,52 +35,43 @@ type currentStatsReader struct {
 	statement              func(args statementArgs) spanner.Statement
 }
 
-func newCurrentStatsReaderWithMaxRowsLimit(
+func newCurrentStatsReader(
 	logger *zap.Logger,
 	database *datasource.Database,
 	metricsMetadata *metadata.MetricsMetadata,
-	topMetricsQueryMaxRows int) *currentStatsReader {
+	config ReaderConfig) *currentStatsReader {
 
 	return &currentStatsReader{
 		logger:                 logger,
 		database:               database,
 		metricsMetadata:        metricsMetadata,
-		topMetricsQueryMaxRows: topMetricsQueryMaxRows,
 		statement:              currentStatsStatement,
-	}
-}
-
-func newCurrentStatsReader(
-	logger *zap.Logger,
-	database *datasource.Database,
-	metricsMetadata *metadata.MetricsMetadata) *currentStatsReader {
-
-	return &currentStatsReader{
-		logger:          logger,
-		database:        database,
-		metricsMetadata: metricsMetadata,
-		statement:       currentStatsStatement,
+		topMetricsQueryMaxRows: config.TopMetricsQueryMaxRows,
 	}
 }
 
 func (reader *currentStatsReader) Name() string {
 	return reader.metricsMetadata.Name + " " +
-		reader.database.DatabaseId().ProjectId() + "::" +
-		reader.database.DatabaseId().InstanceId() + "::" +
-		reader.database.DatabaseId().DatabaseName()
+		reader.database.DatabaseID().ProjectID() + "::" +
+		reader.database.DatabaseID().InstanceID() + "::" +
+		reader.database.DatabaseID().DatabaseName()
 }
 
 func (reader *currentStatsReader) Read(ctx context.Context) ([]pdata.Metrics, error) {
 	reader.logger.Info(fmt.Sprintf("Executing read method for reader %v", reader.Name()))
 
-	stmtArgs := statementArgs{
+	stmt := reader.newPullStatement()
+
+	return reader.pull(ctx, stmt)
+}
+
+func (reader *currentStatsReader) newPullStatement() spanner.Statement {
+	args := statementArgs{
 		query:                  reader.metricsMetadata.Query,
 		topMetricsQueryMaxRows: reader.topMetricsQueryMaxRows,
 	}
 
-	stmt := reader.statement(stmtArgs)
-
-	return reader.pull(ctx, stmt)
+	return reader.statement(args)
 }
 
 func (reader *currentStatsReader) pull(ctx context.Context, stmt spanner.Statement) ([]pdata.Metrics, error) {
@@ -91,19 +82,15 @@ func (reader *currentStatsReader) pull(ctx context.Context, stmt spanner.Stateme
 
 	for {
 		row, err := rowsIterator.Next()
-
 		if err != nil {
 			if err == iterator.Done {
-				break
+				return collectedMetrics, nil
 			}
-
 			reader.logger.Error(fmt.Sprintf("Query \"%v\" failed with %v", stmt.SQL, err))
-
 			return nil, err
 		}
 
-		rowMetrics, err := reader.metricsMetadata.RowToMetrics(reader.database.DatabaseId(), row)
-
+		rowMetrics, err := reader.metricsMetadata.RowToMetrics(reader.database.DatabaseID(), row)
 		if err != nil {
 			reader.logger.Error(fmt.Sprintf("Query \"%v\" failed with %v", stmt.SQL, err))
 			return nil, err
@@ -111,6 +98,4 @@ func (reader *currentStatsReader) pull(ctx context.Context, stmt spanner.Stateme
 
 		collectedMetrics = append(collectedMetrics, rowMetrics...)
 	}
-
-	return collectedMetrics, nil
 }

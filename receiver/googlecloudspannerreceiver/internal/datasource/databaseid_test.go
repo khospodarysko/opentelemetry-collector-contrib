@@ -21,24 +21,24 @@ import (
 )
 
 const (
-	projectId    = "ProjectId"
-	instanceId   = "InstanceId"
+	projectID    = "projectID"
+	instanceID   = "instanceID"
 	databaseName = "DatabaseName"
 )
 
-func databaseId() *DatabaseId {
-	return NewDatabaseId(projectId, instanceId, databaseName)
+func databaseID() *DatabaseID {
+	return NewDatabaseID(projectID, instanceID, databaseName)
 }
 
 func TestNewDatabaseId(t *testing.T) {
-	databaseId := databaseId()
+	databaseID := databaseID()
 
-	assert.Equal(t, projectId, databaseId.projectId)
-	assert.Equal(t, instanceId, databaseId.instanceId)
-	assert.Equal(t, databaseName, databaseId.databaseName)
-	assert.Equal(t, "projects/"+projectId+"/instances/"+instanceId+"/databases/"+databaseName, databaseId.id)
-	assert.Equal(t, projectId, databaseId.ProjectId())
-	assert.Equal(t, instanceId, databaseId.InstanceId())
-	assert.Equal(t, databaseName, databaseId.DatabaseName())
-	assert.Equal(t, "projects/"+projectId+"/instances/"+instanceId+"/databases/"+databaseName, databaseId.Id())
+	assert.Equal(t, projectID, databaseID.projectID)
+	assert.Equal(t, instanceID, databaseID.instanceID)
+	assert.Equal(t, databaseName, databaseID.databaseName)
+	assert.Equal(t, "projects/"+projectID+"/instances/"+instanceID+"/databases/"+databaseName, databaseID.id)
+	assert.Equal(t, projectID, databaseID.ProjectID())
+	assert.Equal(t, instanceID, databaseID.InstanceID())
+	assert.Equal(t, databaseName, databaseID.DatabaseName())
+	assert.Equal(t, "projects/"+projectID+"/instances/"+instanceID+"/databases/"+databaseName, databaseID.ID())
 }

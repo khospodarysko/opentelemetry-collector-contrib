@@ -25,6 +25,7 @@ type Config struct {
 	scraperhelper.ScraperControllerSettings `mapstructure:",squash"`
 
 	TopMetricsQueryMaxRows int       `mapstructure:"top_metrics_query_max_rows"`
+	BackfillEnabled        bool      `mapstructure:"backfill_enabled"`
 	Projects               []Project `mapstructure:"projects"`
 }
 

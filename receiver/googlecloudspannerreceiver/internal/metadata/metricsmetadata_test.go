@@ -27,13 +27,13 @@ import (
 )
 
 const (
-	projectId    = "ProjectId"
-	instanceId   = "InstanceId"
+	projectID    = "ProjectID"
+	instanceID   = "InstanceID"
 	databaseName = "DatabaseName"
 )
 
-func databaseId() *datasource.DatabaseId {
-	return datasource.NewDatabaseId(projectId, instanceId, databaseName)
+func databaseID() *datasource.DatabaseID {
+	return datasource.NewDatabaseID(projectID, instanceID, databaseName)
 }
 
 func TestMetricsMetadata_Timestamp_TimestampColumnName(t *testing.T) {
@@ -497,13 +497,13 @@ func testMetricsMetadataToMetricsWithSpecificMetricDataType(t *testing.T, metric
 		},
 	}
 
-	databaseId := databaseId()
+	databaseID := databaseID()
 
 	metadata := MetricsMetadata{
 		MetricNamePrefix: metricNamePrefix,
 	}
 
-	metrics := metadata.toMetrics(databaseId, timestamp, labelValues, metricValues)
+	metrics := metadata.toMetrics(databaseID, timestamp, labelValues, metricValues)
 
 	assert.Equal(t, len(metricValues), len(metrics))
 
@@ -545,20 +545,20 @@ func testMetricsMetadataToMetricsWithSpecificMetricDataType(t *testing.T, metric
 
 		attributesMap := dataPoint.Attributes()
 
-		value, exists := attributesMap.Get(projectIdLabelName)
+		value, exists := attributesMap.Get(projectIDLabelName)
 
 		assert.True(t, exists)
-		assert.Equal(t, databaseId.ProjectId(), value.StringVal())
+		assert.Equal(t, databaseID.ProjectID(), value.StringVal())
 
-		value, exists = attributesMap.Get(instanceIdLabelName)
+		value, exists = attributesMap.Get(instanceIDLabelName)
 
 		assert.True(t, exists)
-		assert.Equal(t, databaseId.InstanceId(), value.StringVal())
+		assert.Equal(t, databaseID.InstanceID(), value.StringVal())
 
 		value, exists = attributesMap.Get(databaseLabelName)
 
 		assert.True(t, exists)
-		assert.Equal(t, databaseId.DatabaseName(), value.StringVal())
+		assert.Equal(t, databaseID.DatabaseName(), value.StringVal())
 
 		value, exists = attributesMap.Get(stringLabelValue.Name())
 
@@ -609,7 +609,7 @@ func TestMetricsMetadata_RowToMetrics(t *testing.T) {
 	queryLabelValuesMetadata := []LabelValueMetadata{labelValueMetadata}
 	queryMetricValuesMetadata := []MetricValueMetadata{metricValueMetadata}
 
-	databaseId := databaseId()
+	databaseID := databaseID()
 
 	metadata := MetricsMetadata{
 		MetricNamePrefix:          metricNamePrefix,
@@ -630,7 +630,7 @@ func TestMetricsMetadata_RowToMetrics(t *testing.T) {
 			timestamp,
 		})
 
-	metrics, _ := metadata.RowToMetrics(databaseId, row)
+	metrics, _ := metadata.RowToMetrics(databaseID, row)
 
 	assert.Equal(t, 1, len(metrics))
 }

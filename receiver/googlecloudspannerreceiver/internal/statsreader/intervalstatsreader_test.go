@@ -28,14 +28,12 @@ import (
 )
 
 func TestIntervalStatsReader_Name(t *testing.T) {
-	databaseId := datasource.NewDatabaseId(projectId, instanceId, databaseName)
+	databaseID := datasource.NewDatabaseID(projectID, instanceID, databaseName)
 	ctx := context.Background()
 	client, _ := spanner.NewClient(ctx, "")
-
-	database := datasource.NewDatabaseFromClient(client, databaseId)
-
+	database := datasource.NewDatabaseFromClient(client, databaseID)
 	metricsMetadata := &metadata.MetricsMetadata{
-		Name: "name",
+		Name: name,
 	}
 
 	reader := intervalStatsReader{
@@ -45,74 +43,69 @@ func TestIntervalStatsReader_Name(t *testing.T) {
 		},
 	}
 
-	assert.Equal(t, reader.metricsMetadata.Name+" "+databaseId.ProjectId()+"::"+
-		databaseId.InstanceId()+"::"+databaseId.DatabaseName(), reader.Name())
+	assert.Equal(t, reader.metricsMetadata.Name+" "+databaseID.ProjectID()+"::"+
+		databaseID.InstanceID()+"::"+databaseID.DatabaseName(), reader.Name())
 }
 
-func TestNewIntervalStatsReaderWithMaxRowsLimit(t *testing.T) {
-	databaseId := datasource.NewDatabaseId(projectId, instanceId, databaseName)
+func TestNewIntervalStatsReader(t *testing.T) {
+	databaseID := datasource.NewDatabaseID(projectID, instanceID, databaseName)
 	ctx := context.Background()
 	client, _ := spanner.NewClient(ctx, "")
-
-	database := datasource.NewDatabaseFromClient(client, databaseId)
-
+	database := datasource.NewDatabaseFromClient(client, databaseID)
 	metricsMetadata := &metadata.MetricsMetadata{
-		Name: "name",
+		Name: name,
+	}
+	logger := zap.NewNop()
+	config := ReaderConfig{
+		TopMetricsQueryMaxRows: topMetricsQueryMaxRows,
+		BackfillEnabled:        true,
 	}
 
-	logger := zap.NewNop()
-
-	reader := newIntervalStatsReaderWithMaxRowsLimit(logger, database, metricsMetadata, true, topMetricsQueryMaxRows)
+	reader := newIntervalStatsReader(logger, database, metricsMetadata, config)
 
 	assert.Equal(t, database, reader.database)
 	assert.Equal(t, logger, reader.logger)
 	assert.Equal(t, metricsMetadata, reader.metricsMetadata)
 	assert.Equal(t, topMetricsQueryMaxRows, reader.topMetricsQueryMaxRows)
-	assert.True(t, reader.backFillEnabled)
+	assert.True(t, reader.backfillEnabled)
 }
 
-func TestNewIntervalStatsReader(t *testing.T) {
-	databaseId := datasource.NewDatabaseId(projectId, instanceId, databaseName)
-	ctx := context.Background()
-	client, _ := spanner.NewClient(ctx, "")
-
-	database := datasource.NewDatabaseFromClient(client, databaseId)
-
+func TestIntervalStatsReader_NewPullStatement(t *testing.T) {
+	timestamp := time.Now().UTC()
 	metricsMetadata := &metadata.MetricsMetadata{
-		Name: "name",
+		Query: query,
+	}
+	reader := intervalStatsReader{
+		currentStatsReader: currentStatsReader{
+			metricsMetadata:        metricsMetadata,
+			topMetricsQueryMaxRows: topMetricsQueryMaxRows,
+			statement:              intervalStatsStatement,
+		},
 	}
 
-	logger := zap.NewNop()
-
-	reader := newIntervalStatsReader(logger, database, metricsMetadata, true)
-
-	assert.Equal(t, database, reader.database)
-	assert.Equal(t, logger, reader.logger)
-	assert.Equal(t, metricsMetadata, reader.metricsMetadata)
-	assert.True(t, reader.backFillEnabled)
-	assert.Equal(t, 0, reader.topMetricsQueryMaxRows)
+	assert.NotZero(t, reader.newPullStatement(timestamp))
 }
 
 func TestPullTimestamps(t *testing.T) {
 	nowAtStartOfMinute := nowAtStartOfMinute()
-	backFillIntervalAgo := nowAtStartOfMinute.Add(-1 * backFillIntervalDuration)
-	backFillIntervalAgoWthSomeSeconds := backFillIntervalAgo.Add(-15 * time.Second)
+	backfillIntervalAgo := nowAtStartOfMinute.Add(-1 * backfillIntervalDuration)
+	backfillIntervalAgoWthSomeSeconds := backfillIntervalAgo.Add(-15 * time.Second)
 
 	testCases := map[string]struct {
 		lastPullTimestamp  time.Time
-		backFillEnabled    bool
+		backfillEnabled    bool
 		amountOfTimestamps int
 	}{
-		"Zero last pull timestamp without back filling":                                                       {time.Time{}, false, 1},
-		"Zero last pull timestamp with back filling":                                                          {time.Time{}, true, int(backFillIntervalDuration.Minutes())},
-		"Last pull timestamp now at start of minute back filling does not matter":                             {nowAtStartOfMinute, false, 1},
-		"Last pull timestamp back fill interval ago of minute back filling does not matter":                   {backFillIntervalAgo, false, int(backFillIntervalDuration.Minutes())},
-		"Last pull timestamp back fill interval ago with some seconds of minute back filling does not matter": {backFillIntervalAgoWthSomeSeconds, false, int(backFillIntervalDuration.Minutes()) + 1},
+		"Zero last pull timestamp without backfill":                                                       {time.Time{}, false, 1},
+		"Zero last pull timestamp with backfill":                                                          {time.Time{}, true, int(backfillIntervalDuration.Minutes())},
+		"Last pull timestamp now at start of minute backfill does not matter":                             {nowAtStartOfMinute, false, 1},
+		"Last pull timestamp back fill interval ago of minute backfill does not matter":                   {backfillIntervalAgo, false, int(backfillIntervalDuration.Minutes())},
+		"Last pull timestamp back fill interval ago with some seconds of minute backfill does not matter": {backfillIntervalAgoWthSomeSeconds, false, int(backfillIntervalDuration.Minutes()) + 1},
 	}
 
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
-			timestamps := pullTimestamps(testCase.lastPullTimestamp, testCase.backFillEnabled)
+			timestamps := pullTimestamps(testCase.lastPullTimestamp, testCase.backfillEnabled)
 
 			assert.Equal(t, testCase.amountOfTimestamps, len(timestamps))
 		})

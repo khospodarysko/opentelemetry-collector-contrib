@@ -23,37 +23,31 @@ import (
 
 type Database struct {
 	client     *spanner.Client
-	databaseId *DatabaseId
+	databaseID *DatabaseID
 }
 
 func (database *Database) Client() *spanner.Client {
 	return database.client
 }
 
-func (database *Database) DatabaseId() *DatabaseId {
-	return database.databaseId
+func (database *Database) DatabaseID() *DatabaseID {
+	return database.databaseID
 }
 
-func NewDatabase(ctx context.Context, databaseId *DatabaseId, credentialsFilePath string) (*Database, error) {
-
+func NewDatabase(ctx context.Context, databaseID *DatabaseID, credentialsFilePath string) (*Database, error) {
 	credentialsFileClientOption := option.WithCredentialsFile(credentialsFilePath)
-	client, err := spanner.NewClient(ctx, databaseId.Id(), credentialsFileClientOption)
+	client, err := spanner.NewClient(ctx, databaseID.ID(), credentialsFileClientOption)
 
 	if err != nil {
 		return nil, err
 	}
 
-	database := &Database{
-		client:     client,
-		databaseId: databaseId,
-	}
-
-	return database, nil
+	return NewDatabaseFromClient(client, databaseID), nil
 }
 
-func NewDatabaseFromClient(client *spanner.Client, databaseId *DatabaseId) *Database {
+func NewDatabaseFromClient(client *spanner.Client, databaseID *DatabaseID) *Database {
 	return &Database{
 		client:     client,
-		databaseId: databaseId,
+		databaseID: databaseID,
 	}
 }

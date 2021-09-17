@@ -31,15 +31,14 @@ type DatabaseReader struct {
 }
 
 func NewDatabaseReader(ctx context.Context,
-	databaseId *datasource.DatabaseId,
+	databaseID *datasource.DatabaseID,
 	serviceAccountPath string,
 	readerConfig ReaderConfig,
 	logger *zap.Logger) (*DatabaseReader, error) {
 
-	database, err := datasource.NewDatabase(ctx, databaseId, serviceAccountPath)
-
+	database, err := datasource.NewDatabase(ctx, databaseID, serviceAccountPath)
 	if err != nil {
-		logger.Error(fmt.Sprintf("Error occurred during client instantiation for database %v", databaseId.Id()))
+		logger.Error(fmt.Sprintf("Error occurred during client instantiation for database %v", databaseID.ID()))
 		return nil, err
 	}
 
@@ -60,20 +59,22 @@ func NewDatabaseReader(ctx context.Context,
 	}, nil
 }
 
+func (databaseReader *DatabaseReader) Name() string {
+	return databaseReader.database.DatabaseID().ID()
+}
+
 func (databaseReader *DatabaseReader) Shutdown() {
-	databaseReader.logger.Info(fmt.Sprintf("Closing connection to database %v", databaseReader.database.DatabaseId().Id()))
+	databaseReader.logger.Info(fmt.Sprintf("Closing connection to database %v", databaseReader.database.DatabaseID().ID()))
 	databaseReader.database.Client().Close()
 }
 
 func (databaseReader *DatabaseReader) Read(ctx context.Context) []pdata.Metrics {
-	databaseReader.logger.Info(fmt.Sprintf("Executing read method for database %v", databaseReader.database.DatabaseId().Id()))
+	databaseReader.logger.Info(fmt.Sprintf("Executing read method for database %v", databaseReader.database.DatabaseID().ID()))
 
 	var result []pdata.Metrics
 
 	for _, reader := range databaseReader.readers {
-		metrics, err := reader.Read(ctx)
-
-		if err != nil {
+		if metrics, err := reader.Read(ctx); err != nil {
 			databaseReader.logger.Error(fmt.Sprintf("Cannot read data for metrics databaseReader %v because of and error %v",
 				reader.Name(), err))
 		} else {

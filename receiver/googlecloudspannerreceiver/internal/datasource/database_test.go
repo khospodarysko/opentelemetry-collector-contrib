@@ -25,10 +25,31 @@ import (
 func TestNewDatabaseFromClient(t *testing.T) {
 	ctx := context.Background()
 	client, _ := spanner.NewClient(ctx, "")
-	databaseId := databaseId()
+	databaseID := databaseID()
 
-	database := NewDatabaseFromClient(client, databaseId)
+	database := NewDatabaseFromClient(client, databaseID)
 
 	assert.Equal(t, client, database.Client())
-	assert.Equal(t, databaseId, database.DatabaseId())
+	assert.Equal(t, databaseID, database.DatabaseID())
+}
+
+func TestNewDatabase(t *testing.T) {
+	ctx := context.Background()
+	databaseID := databaseID()
+
+	database, err := NewDatabase(ctx, databaseID, "../../testdata/serviceAccount.json")
+
+	assert.Nil(t, err)
+	assert.NotNil(t, database.Client())
+	assert.Equal(t, databaseID, database.DatabaseID())
+}
+
+func TestNewDatabaseWithError(t *testing.T) {
+	ctx := context.Background()
+	databaseID := databaseID()
+
+	database, err := NewDatabase(ctx, databaseID, "does not exist")
+
+	assert.NotNil(t, err)
+	assert.Nil(t, database)
 }
