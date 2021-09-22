@@ -25,6 +25,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/googlecloudspannerreceiver/internal/datasource"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/googlecloudspannerreceiver/internal/metadata"
 )
 
 type testReader struct {
@@ -52,13 +53,14 @@ func TestNewDatabaseReader(t *testing.T) {
 		BackfillEnabled:        false,
 	}
 	logger := zap.NewNop()
+	var parsedMetadata []*metadata.MetricsMetadata
 
-	reader, err := NewDatabaseReader(ctx, databaseID, serviceAccountPath, readerConfig, logger)
+	reader, err := NewDatabaseReader(ctx, parsedMetadata, databaseID, serviceAccountPath, readerConfig, logger)
 
 	assert.Nil(t, err)
 	assert.Equal(t, databaseID, reader.database.DatabaseID())
 	assert.Equal(t, logger, reader.logger)
-	assert.Equal(t, 9, len(reader.readers))
+	assert.Equal(t, 0, len(reader.readers))
 }
 
 func TestNewDatabaseReaderWithError(t *testing.T) {
@@ -70,11 +72,40 @@ func TestNewDatabaseReaderWithError(t *testing.T) {
 		BackfillEnabled:        false,
 	}
 	logger := zap.NewNop()
+	var parsedMetadata []*metadata.MetricsMetadata
 
-	reader, err := NewDatabaseReader(ctx, databaseID, serviceAccountPath, readerConfig, logger)
+	reader, err := NewDatabaseReader(ctx, parsedMetadata, databaseID, serviceAccountPath, readerConfig, logger)
 
 	assert.NotNil(t, err)
 	assert.Nil(t, reader)
+}
+
+func TestInitializeReaders(t *testing.T) {
+	databaseID := datasource.NewDatabaseID(projectID, instanceID, databaseName)
+	logger := zap.NewNop()
+	var client *spanner.Client
+	database := datasource.NewDatabaseFromClient(client, databaseID)
+	currentStatsMetadata := createMetricsMetadata(query)
+	intervalStatsMetadata := createMetricsMetadata(query)
+
+	currentStatsMetadata.Name = "Current"
+	currentStatsMetadata.TimestampColumnName = ""
+	intervalStatsMetadata.Name = "Interval"
+
+	parsedMetadata := []*metadata.MetricsMetadata{
+		currentStatsMetadata,
+		intervalStatsMetadata,
+	}
+	readerConfig := ReaderConfig{
+		TopMetricsQueryMaxRows: topMetricsQueryMaxRows,
+		BackfillEnabled:        false,
+	}
+
+	readers := initializeReaders(logger, parsedMetadata, database, readerConfig)
+
+	assert.Equal(t, 2, len(readers))
+	assert.IsType(t, &currentStatsReader{}, readers[0])
+	assert.IsType(t, &intervalStatsReader{}, readers[1])
 }
 
 func TestDatabaseReader_Name(t *testing.T) {

@@ -16,6 +16,7 @@ package googlecloudspannerreceiver
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"time"
 
@@ -26,8 +27,13 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/googlecloudspannerreceiver/internal/datasource"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/googlecloudspannerreceiver/internal/metadata"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/googlecloudspannerreceiver/internal/metadataparser"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/googlecloudspannerreceiver/internal/statsreader"
 )
+
+//go:embed "internal/metadataconfig/metadata.yaml"
+var metadataYaml []byte
 
 var _ component.MetricsReceiver = (*googleCloudSpannerReceiver)(nil)
 
@@ -99,8 +105,14 @@ func (receiver *googleCloudSpannerReceiver) initializeProjectReaders(ctx context
 		TopMetricsQueryMaxRows: receiver.config.TopMetricsQueryMaxRows,
 	}
 
+	parseMetadata, err := metadataparser.ParseMetadataConfig(metadataYaml)
+	if err != nil {
+		receiver.logger.Error(fmt.Sprintf("Error occurred during parsing of metadata %v", err))
+		return err
+	}
+
 	for _, project := range receiver.config.Projects {
-		projectReader, err := newProjectReader(project, readerConfig, ctx, receiver.logger)
+		projectReader, err := newProjectReader(project, parseMetadata, readerConfig, ctx, receiver.logger)
 		if err != nil {
 			return err
 		}
@@ -111,7 +123,8 @@ func (receiver *googleCloudSpannerReceiver) initializeProjectReaders(ctx context
 	return nil
 }
 
-func newProjectReader(project Project, readerConfig statsreader.ReaderConfig, ctx context.Context,
+func newProjectReader(project Project, parsedMetadata []*metadata.MetricsMetadata,
+	readerConfig statsreader.ReaderConfig, ctx context.Context,
 	logger *zap.Logger) (*statsreader.ProjectReader, error) {
 	logger.Info(fmt.Sprintf("Constructing project reader for project id %v", project.ID))
 
@@ -124,7 +137,7 @@ func newProjectReader(project Project, readerConfig statsreader.ReaderConfig, ct
 
 			databaseID := datasource.NewDatabaseID(project.ID, instance.ID, database)
 
-			databaseReader, err := statsreader.NewDatabaseReader(ctx, databaseID,
+			databaseReader, err := statsreader.NewDatabaseReader(ctx, parsedMetadata, databaseID,
 				project.ServiceAccountKey, readerConfig, logger)
 			if err != nil {
 				return nil, err

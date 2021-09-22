@@ -634,3 +634,23 @@ func TestMetricsMetadata_RowToMetrics(t *testing.T) {
 
 	assert.Equal(t, 1, len(metrics))
 }
+
+func TestMetricsMetadata_MetadataType(t *testing.T) {
+	testCases := map[string]struct {
+		timestampColumnName  string
+		expectedMetadataType MetadataType
+	}{
+		"Current stats metadata":  {"", MetadataTypeCurrentStats},
+		"Interval stats metadata": {"timestampColumnName", MetadataTypeIntervalStats},
+	}
+
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			metricsMetadata := &MetricsMetadata{
+				TimestampColumnName: testCase.timestampColumnName,
+			}
+
+			assert.Equal(t, testCase.expectedMetadataType, metricsMetadata.MetadataType())
+		})
+	}
+}

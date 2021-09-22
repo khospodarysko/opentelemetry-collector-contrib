@@ -28,6 +28,7 @@ import (
 	"go.opentelemetry.io/collector/model/pdata"
 	"go.uber.org/zap"
 
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/googlecloudspannerreceiver/internal/metadata"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/googlecloudspannerreceiver/internal/statsreader"
 )
 
@@ -184,11 +185,13 @@ func TestStartWithContextDone(t *testing.T) {
 
 func TestInitializeProjectReaders(t *testing.T) {
 	testCases := map[string]struct {
-		serviceAccountPath string
-		expectError        bool
+		serviceAccountPath    string
+		expectError           bool
+		replaceMetadataConfig bool
 	}{
-		"Happy path": {serviceAccountValidPath, false},
-		"With error": {serviceAccountInvalidPath, true},
+		"Happy path":                 {serviceAccountValidPath, false, false},
+		"With error":                 {serviceAccountInvalidPath, true, false},
+		"With metadata config error": {serviceAccountInvalidPath, true, true},
 	}
 
 	for name, testCase := range testCases {
@@ -203,7 +206,17 @@ func TestInitializeProjectReaders(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, receiver)
 
+			yaml := metadataYaml
+
+			if testCase.replaceMetadataConfig {
+				metadataYaml = []byte{1}
+			}
+
 			err = receiverCasted.initializeProjectReaders(context.Background())
+
+			if testCase.replaceMetadataConfig {
+				metadataYaml = yaml
+			}
 
 			if testCase.expectError {
 				require.Error(t, err)
@@ -229,8 +242,10 @@ func TestNewProjectReader(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			logger := zap.NewNop()
 			cfg := createConfig(testCase.serviceAccountPath)
+			var parsedMetadata []*metadata.MetricsMetadata
 
-			reader, err := newProjectReader(cfg.Projects[0], statsreader.ReaderConfig{}, context.Background(), logger)
+			reader, err := newProjectReader(cfg.Projects[0], parsedMetadata, statsreader.ReaderConfig{},
+				context.Background(), logger)
 
 			if testCase.expectError {
 				require.Error(t, err)
@@ -242,6 +257,7 @@ func TestNewProjectReader(t *testing.T) {
 		})
 	}
 }
+
 func TestCollectData(t *testing.T) {
 	logger := zap.NewNop()
 

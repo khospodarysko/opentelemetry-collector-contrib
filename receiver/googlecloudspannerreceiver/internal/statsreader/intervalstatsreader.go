@@ -33,8 +33,8 @@ const (
 
 type intervalStatsReader struct {
 	currentStatsReader
-	backfillEnabled   bool
-	lastPullTimestamp time.Time
+	timestampsGenerator timestampsGenerator
+	lastPullTimestamp   time.Time
 }
 
 func newIntervalStatsReader(
@@ -50,10 +50,14 @@ func newIntervalStatsReader(
 		statement:              intervalStatsStatement,
 		topMetricsQueryMaxRows: config.TopMetricsQueryMaxRows,
 	}
+	timestampsGenerator := timestampsGenerator{
+		backfillEnabled: config.BackfillEnabled,
+		difference:      time.Minute,
+	}
 
 	return &intervalStatsReader{
-		currentStatsReader: reader,
-		backfillEnabled:    config.BackfillEnabled,
+		currentStatsReader:  reader,
+		timestampsGenerator: timestampsGenerator,
 	}
 }
 
@@ -61,7 +65,7 @@ func (reader *intervalStatsReader) Read(ctx context.Context) ([]pdata.Metrics, e
 	reader.logger.Info(fmt.Sprintf("Executing read method for reader %v", reader.Name()))
 
 	// Generating pull timestamps
-	pullTimestamps := pullTimestamps(reader.lastPullTimestamp, reader.backfillEnabled)
+	pullTimestamps := reader.timestampsGenerator.pullTimestamps(reader.lastPullTimestamp, time.Now().UTC())
 
 	var collectedMetrics []pdata.Metrics
 
@@ -90,45 +94,4 @@ func (reader *intervalStatsReader) newPullStatement(pullTimestamp time.Time) spa
 	}
 
 	return reader.statement(args)
-}
-
-// This slice will always contain at least one value.
-func pullTimestamps(lastPullTimestamp time.Time, backfillEnabled bool) []time.Time {
-	var timestamps []time.Time
-	upperBound := nowAtStartOfMinute()
-
-	if lastPullTimestamp.IsZero() {
-		if backfillEnabled {
-			timestamps = pullTimestampsWithMinuteDifference(upperBound.Add(-1*backfillIntervalDuration), upperBound)
-		} else {
-			timestamps = []time.Time{upperBound}
-		}
-	} else {
-		// lastPullTimestamp is already set to start of minute
-		timestamps = pullTimestampsWithMinuteDifference(lastPullTimestamp, upperBound)
-	}
-
-	return timestamps
-}
-
-// This slice will always contain at least one value.
-// Difference between each two points is 1 minute.
-func pullTimestampsWithMinuteDifference(lowerBound time.Time, upperBound time.Time) []time.Time {
-	var timestamps []time.Time
-
-	for value := lowerBound.Add(time.Minute); !value.After(upperBound); value = value.Add(time.Minute) {
-		timestamps = append(timestamps, value)
-	}
-
-	// To ensure that we did not miss upper bound and timestamps slice will contain at least one value
-	if len(timestamps) <= 0 || timestamps[len(timestamps)-1] != upperBound {
-		timestamps = append(timestamps, upperBound)
-	}
-
-	return timestamps
-}
-
-func nowAtStartOfMinute() time.Time {
-	now := time.Now().UTC()
-	return time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute(), 0, 0, now.Location())
 }
