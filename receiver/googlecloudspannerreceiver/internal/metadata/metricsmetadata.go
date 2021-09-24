@@ -30,11 +30,11 @@ const (
 	databaseLabelName   = "database"
 )
 
-type MetadataType int32
+type MetricsMetadataType int32
 
 const (
-	MetadataTypeCurrentStats MetadataType = iota
-	MetadataTypeIntervalStats
+	MetricsMetadataTypeCurrentStats MetricsMetadataType = iota
+	MetricsMetadataTypeIntervalStats
 )
 
 type MetricsMetadata struct {
@@ -48,7 +48,7 @@ type MetricsMetadata struct {
 }
 
 func (metadata *MetricsMetadata) timestamp(row *spanner.Row) (time.Time, error) {
-	if metadata.MetadataType() == MetadataTypeCurrentStats {
+	if metadata.MetadataType() == MetricsMetadataTypeCurrentStats {
 		return time.Now().UTC(), nil
 	}
 	var timestamp time.Time
@@ -213,9 +213,9 @@ func (metadata *MetricsMetadata) toMetrics(databaseID *datasource.DatabaseID, ti
 	return metrics
 }
 
-func (metadata *MetricsMetadata) MetadataType() MetadataType {
+func (metadata *MetricsMetadata) MetadataType() MetricsMetadataType {
 	if metadata.TimestampColumnName == "" {
-		return MetadataTypeCurrentStats
+		return MetricsMetadataTypeCurrentStats
 	}
-	return MetadataTypeIntervalStats
+	return MetricsMetadataTypeIntervalStats
 }

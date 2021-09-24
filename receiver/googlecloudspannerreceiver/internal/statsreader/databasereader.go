@@ -59,9 +59,9 @@ func initializeReaders(logger *zap.Logger, parsedMetadata []*metadata.MetricsMet
 
 	for _, mData := range parsedMetadata {
 		switch mData.MetadataType() {
-		case metadata.MetadataTypeCurrentStats:
+		case metadata.MetricsMetadataTypeCurrentStats:
 			readers = append(readers, newCurrentStatsReader(logger, database, mData, readerConfig))
-		case metadata.MetadataTypeIntervalStats:
+		case metadata.MetricsMetadataTypeIntervalStats:
 			readers = append(readers, newIntervalStatsReader(logger, database, mData, readerConfig))
 		}
 	}

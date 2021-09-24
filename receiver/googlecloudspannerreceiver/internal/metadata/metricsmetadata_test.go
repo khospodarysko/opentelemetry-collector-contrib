@@ -545,10 +545,10 @@ func TestMetricsMetadata_RowToMetrics(t *testing.T) {
 func TestMetricsMetadata_MetadataType(t *testing.T) {
 	testCases := map[string]struct {
 		timestampColumnName  string
-		expectedMetadataType MetadataType
+		expectedMetadataType MetricsMetadataType
 	}{
-		"Current stats metadata":  {"", MetadataTypeCurrentStats},
-		"Interval stats metadata": {"timestampColumnName", MetadataTypeIntervalStats},
+		"Current stats metadata":  {"", MetricsMetadataTypeCurrentStats},
+		"Interval stats metadata": {"timestampColumnName", MetricsMetadataTypeIntervalStats},
 	}
 
 	for name, testCase := range testCases {
