@@ -42,24 +42,13 @@ const (
 func createMetricsMetadata(query string) *metadata.MetricsMetadata {
 	// Labels
 	queryLabelValuesMetadata := []metadata.LabelValueMetadata{
-		metadata.StringLabelValueMetadata{
-			QueryLabelValueMetadata: metadata.QueryLabelValueMetadata{
-				LabelName:       "metric_label",
-				LabelColumnName: "METRIC_LABEL",
-			},
-		},
+		metadata.NewStringLabelValueMetadata("metric_label", "METRIC_LABEL"),
 	}
 
 	// Metrics
 	queryMetricValuesMetadata := []metadata.MetricValueMetadata{
-		metadata.Int64MetricValueMetadata{
-			QueryMetricValueMetadata: metadata.QueryMetricValueMetadata{
-				MetricName:       "metric_value",
-				MetricColumnName: "METRIC_VALUE",
-				MetricDataType:   pdata.MetricDataTypeGauge,
-				MetricUnit:       "unit",
-			},
-		},
+		metadata.NewInt64MetricValueMetadata("metric_value", "METRIC_VALUE",
+			pdata.MetricDataTypeGauge, "unit"),
 	}
 
 	return &metadata.MetricsMetadata{

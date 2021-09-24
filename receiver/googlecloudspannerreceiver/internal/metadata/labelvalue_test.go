@@ -22,9 +22,9 @@ import (
 
 func TestStringLabelValueMetadata(t *testing.T) {
 	metadata := StringLabelValueMetadata{
-		QueryLabelValueMetadata{
-			LabelName:       labelName,
-			LabelColumnName: labelColumnName,
+		queryLabelValueMetadata{
+			name:       labelName,
+			columnName: labelColumnName,
 		},
 	}
 
@@ -38,9 +38,9 @@ func TestStringLabelValueMetadata(t *testing.T) {
 
 func TestInt64LabelValueMetadata(t *testing.T) {
 	metadata := Int64LabelValueMetadata{
-		QueryLabelValueMetadata{
-			LabelName:       labelName,
-			LabelColumnName: labelColumnName,
+		queryLabelValueMetadata{
+			name:       labelName,
+			columnName: labelColumnName,
 		},
 	}
 
@@ -54,9 +54,9 @@ func TestInt64LabelValueMetadata(t *testing.T) {
 
 func TestBoolLabelValueMetadata(t *testing.T) {
 	metadata := BoolLabelValueMetadata{
-		QueryLabelValueMetadata{
-			LabelName:       labelName,
-			LabelColumnName: labelColumnName,
+		queryLabelValueMetadata{
+			name:       labelName,
+			columnName: labelColumnName,
 		},
 	}
 
@@ -70,9 +70,9 @@ func TestBoolLabelValueMetadata(t *testing.T) {
 
 func TestStringSliceLabelValueMetadata(t *testing.T) {
 	metadata := StringSliceLabelValueMetadata{
-		QueryLabelValueMetadata{
-			LabelName:       labelName,
-			LabelColumnName: labelColumnName,
+		queryLabelValueMetadata{
+			name:       labelName,
+			columnName: labelColumnName,
 		},
 	}
 
@@ -86,9 +86,9 @@ func TestStringSliceLabelValueMetadata(t *testing.T) {
 
 func TestByteSliceLabelValueMetadata(t *testing.T) {
 	metadata := ByteSliceLabelValueMetadata{
-		QueryLabelValueMetadata{
-			LabelName:       labelName,
-			LabelColumnName: labelColumnName,
+		queryLabelValueMetadata{
+			name:       labelName,
+			columnName: labelColumnName,
 		},
 	}
 
@@ -102,16 +102,16 @@ func TestByteSliceLabelValueMetadata(t *testing.T) {
 
 func TestStringLabelValue(t *testing.T) {
 	metadata := StringLabelValueMetadata{
-		QueryLabelValueMetadata{
-			LabelName:       labelName,
-			LabelColumnName: labelColumnName,
+		queryLabelValueMetadata{
+			name:       labelName,
+			columnName: labelColumnName,
 		},
 	}
 
 	labelValue :=
-		StringLabelValue{
+		stringLabelValue{
 			StringLabelValueMetadata: metadata,
-			Val:                      stringValue,
+			value:                    stringValue,
 		}
 
 	assert.Equal(t, metadata, labelValue.StringLabelValueMetadata)
@@ -120,16 +120,16 @@ func TestStringLabelValue(t *testing.T) {
 
 func TestInt64LabelValue(t *testing.T) {
 	metadata := Int64LabelValueMetadata{
-		QueryLabelValueMetadata{
-			LabelName:       labelName,
-			LabelColumnName: labelColumnName,
+		queryLabelValueMetadata{
+			name:       labelName,
+			columnName: labelColumnName,
 		},
 	}
 
 	labelValue :=
-		Int64LabelValue{
+		int64LabelValue{
 			Int64LabelValueMetadata: metadata,
-			Val:                     int64Value,
+			value:                   int64Value,
 		}
 
 	assert.Equal(t, metadata, labelValue.Int64LabelValueMetadata)
@@ -138,16 +138,16 @@ func TestInt64LabelValue(t *testing.T) {
 
 func TestBoolLabelValue(t *testing.T) {
 	metadata := BoolLabelValueMetadata{
-		QueryLabelValueMetadata{
-			LabelName:       labelName,
-			LabelColumnName: labelColumnName,
+		queryLabelValueMetadata{
+			name:       labelName,
+			columnName: labelColumnName,
 		},
 	}
 
 	labelValue :=
-		BoolLabelValue{
+		boolLabelValue{
 			BoolLabelValueMetadata: metadata,
-			Val:                    boolValue,
+			value:                  boolValue,
 		}
 
 	assert.Equal(t, metadata, labelValue.BoolLabelValueMetadata)
@@ -156,16 +156,16 @@ func TestBoolLabelValue(t *testing.T) {
 
 func TestStringSliceLabelValue(t *testing.T) {
 	metadata := StringSliceLabelValueMetadata{
-		QueryLabelValueMetadata{
-			LabelName:       labelName,
-			LabelColumnName: labelColumnName,
+		queryLabelValueMetadata{
+			name:       labelName,
+			columnName: labelColumnName,
 		},
 	}
 
 	labelValue :=
-		StringSliceLabelValue{
+		stringSliceLabelValue{
 			StringSliceLabelValueMetadata: metadata,
-			Val:                           stringValue,
+			value:                         stringValue,
 		}
 
 	assert.Equal(t, metadata, labelValue.StringSliceLabelValueMetadata)
@@ -174,34 +174,76 @@ func TestStringSliceLabelValue(t *testing.T) {
 
 func TestByteSliceLabelValue(t *testing.T) {
 	metadata := ByteSliceLabelValueMetadata{
-		QueryLabelValueMetadata{
-			LabelName:       labelName,
-			LabelColumnName: labelColumnName,
+		queryLabelValueMetadata{
+			name:       labelName,
+			columnName: labelColumnName,
 		},
 	}
 
 	labelValue :=
-		ByteSliceLabelValue{
+		byteSliceLabelValue{
 			ByteSliceLabelValueMetadata: metadata,
-			Val:                         stringValue,
+			value:                       stringValue,
 		}
 
 	assert.Equal(t, metadata, labelValue.ByteSliceLabelValueMetadata)
 	assert.Equal(t, stringValue, labelValue.Value())
 }
 
+func TestNewQueryLabelValueMetadata(t *testing.T) {
+	metadata := newQueryLabelValueMetadata(labelName, labelColumnName)
+
+	assert.Equal(t, labelName, metadata.name)
+	assert.Equal(t, labelColumnName, metadata.columnName)
+}
+
+func TestNewStringLabelValueMetadata(t *testing.T) {
+	metadata := NewStringLabelValueMetadata(labelName, labelColumnName)
+
+	assert.Equal(t, labelName, metadata.name)
+	assert.Equal(t, labelColumnName, metadata.columnName)
+}
+
+func TestNewInt64LabelValueMetadata(t *testing.T) {
+	metadata := NewInt64LabelValueMetadata(labelName, labelColumnName)
+
+	assert.Equal(t, labelName, metadata.name)
+	assert.Equal(t, labelColumnName, metadata.columnName)
+}
+
+func TestNewBoolLabelValueMetadata(t *testing.T) {
+	metadata := NewBoolLabelValueMetadata(labelName, labelColumnName)
+
+	assert.Equal(t, labelName, metadata.name)
+	assert.Equal(t, labelColumnName, metadata.columnName)
+}
+
+func TestNewStringSliceLabelValueMetadata(t *testing.T) {
+	metadata := NewStringSliceLabelValueMetadata(labelName, labelColumnName)
+
+	assert.Equal(t, labelName, metadata.name)
+	assert.Equal(t, labelColumnName, metadata.columnName)
+}
+
+func TestNewByteSliceLabelValueMetadata(t *testing.T) {
+	metadata := NewByteSliceLabelValueMetadata(labelName, labelColumnName)
+
+	assert.Equal(t, labelName, metadata.name)
+	assert.Equal(t, labelColumnName, metadata.columnName)
+}
+
 func TestNewStringLabelValue(t *testing.T) {
 	metadata := StringLabelValueMetadata{
-		QueryLabelValueMetadata{
-			LabelName:       labelName,
-			LabelColumnName: labelColumnName,
+		queryLabelValueMetadata{
+			name:       labelName,
+			columnName: labelColumnName,
 		},
 	}
 
 	value := stringValue
 	valueHolder := &value
 
-	labelValue := NewStringLabelValue(metadata, valueHolder)
+	labelValue := newStringLabelValue(metadata, valueHolder)
 
 	assert.Equal(t, metadata, labelValue.StringLabelValueMetadata)
 	assert.Equal(t, stringValue, labelValue.Value())
@@ -209,16 +251,16 @@ func TestNewStringLabelValue(t *testing.T) {
 
 func TestNewInt64LabelValue(t *testing.T) {
 	metadata := Int64LabelValueMetadata{
-		QueryLabelValueMetadata{
-			LabelName:       labelName,
-			LabelColumnName: labelColumnName,
+		queryLabelValueMetadata{
+			name:       labelName,
+			columnName: labelColumnName,
 		},
 	}
 
 	value := int64Value
 	valueHolder := &value
 
-	labelValue := NewInt64LabelValue(metadata, valueHolder)
+	labelValue := newInt64LabelValue(metadata, valueHolder)
 
 	assert.Equal(t, metadata, labelValue.Int64LabelValueMetadata)
 	assert.Equal(t, int64Value, labelValue.Value())
@@ -226,16 +268,16 @@ func TestNewInt64LabelValue(t *testing.T) {
 
 func TestNewBoolLabelValue(t *testing.T) {
 	metadata := BoolLabelValueMetadata{
-		QueryLabelValueMetadata{
-			LabelName:       labelName,
-			LabelColumnName: labelColumnName,
+		queryLabelValueMetadata{
+			name:       labelName,
+			columnName: labelColumnName,
 		},
 	}
 
 	value := boolValue
 	valueHolder := &value
 
-	labelValue := NewBoolLabelValue(metadata, valueHolder)
+	labelValue := newBoolLabelValue(metadata, valueHolder)
 
 	assert.Equal(t, metadata, labelValue.BoolLabelValueMetadata)
 	assert.Equal(t, boolValue, labelValue.Value())
@@ -243,9 +285,9 @@ func TestNewBoolLabelValue(t *testing.T) {
 
 func TestNewStringSliceLabelValue(t *testing.T) {
 	metadata := StringSliceLabelValueMetadata{
-		QueryLabelValueMetadata{
-			LabelName:       labelName,
-			LabelColumnName: labelColumnName,
+		queryLabelValueMetadata{
+			name:       labelName,
+			columnName: labelColumnName,
 		},
 	}
 
@@ -253,7 +295,7 @@ func TestNewStringSliceLabelValue(t *testing.T) {
 	expectedValue := "a,b,c"
 	valueHolder := &value
 
-	labelValue := NewStringSliceLabelValue(metadata, valueHolder)
+	labelValue := newStringSliceLabelValue(metadata, valueHolder)
 
 	assert.Equal(t, metadata, labelValue.StringSliceLabelValueMetadata)
 	assert.Equal(t, expectedValue, labelValue.Value())
@@ -261,16 +303,16 @@ func TestNewStringSliceLabelValue(t *testing.T) {
 
 func TestNewByteSliceLabelValue(t *testing.T) {
 	metadata := ByteSliceLabelValueMetadata{
-		QueryLabelValueMetadata{
-			LabelName:       labelName,
-			LabelColumnName: labelColumnName,
+		queryLabelValueMetadata{
+			name:       labelName,
+			columnName: labelColumnName,
 		},
 	}
 
 	value := []byte(stringValue)
 	valueHolder := &value
 
-	labelValue := NewByteSliceLabelValue(metadata, valueHolder)
+	labelValue := newByteSliceLabelValue(metadata, valueHolder)
 
 	assert.Equal(t, metadata, labelValue.ByteSliceLabelValueMetadata)
 	assert.Equal(t, stringValue, labelValue.Value())
