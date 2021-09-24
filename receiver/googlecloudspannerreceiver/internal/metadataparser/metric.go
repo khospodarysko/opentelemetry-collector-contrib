@@ -38,30 +38,22 @@ type Metric struct {
 
 func (metric Metric) toMetricValueMetadata() (metadata.MetricValueMetadata, error) {
 	var valueMetadata metadata.MetricValueMetadata
-	metricMetadata := metadata.QueryMetricValueMetadata{
-		MetricName:       metric.Name,
-		MetricColumnName: metric.ColumnName,
-		MetricUnit:       metric.Unit,
-	}
+	var dataType pdata.MetricDataType
 
 	switch metric.DataType {
 	case metricDataTypeGauge:
-		metricMetadata.MetricDataType = pdata.MetricDataTypeGauge
+		dataType = pdata.MetricDataTypeGauge
 	case metricDataTypeSum:
-		metricMetadata.MetricDataType = pdata.MetricDataTypeSum
+		dataType = pdata.MetricDataTypeSum
 	default:
 		return nil, fmt.Errorf("invalid data type received for metric `%v`", metric.Name)
 	}
 
 	switch metric.ValueType {
 	case metricValueTypeInt:
-		valueMetadata = metadata.Int64MetricValueMetadata{
-			QueryMetricValueMetadata: metricMetadata,
-		}
+		valueMetadata = metadata.NewInt64MetricValueMetadata(metric.Name, metric.ColumnName, dataType, metric.Unit)
 	case metricValueTypeFloat:
-		valueMetadata = metadata.Float64MetricValueMetadata{
-			QueryMetricValueMetadata: metricMetadata,
-		}
+		valueMetadata = metadata.NewFloat64MetricValueMetadata(metric.Name, metric.ColumnName, dataType, metric.Unit)
 	default:
 		return nil, fmt.Errorf("invalid value type received for metric `%v`", metric.Name)
 	}

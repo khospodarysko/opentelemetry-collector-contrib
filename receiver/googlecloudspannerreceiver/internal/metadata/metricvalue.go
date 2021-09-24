@@ -27,45 +27,72 @@ type MetricValue interface {
 	Value() interface{}
 }
 
-type QueryMetricValueMetadata struct {
-	MetricName       string
-	MetricColumnName string
-	MetricDataType   pdata.MetricDataType
-	MetricUnit       string
+type queryMetricValueMetadata struct {
+	name       string
+	columnName string
+	dataType   pdata.MetricDataType
+	unit       string
+}
+
+func newQueryMetricValueMetadata(name string, columnName string, dataType pdata.MetricDataType,
+	unit string) queryMetricValueMetadata {
+
+	return queryMetricValueMetadata{
+		name:       name,
+		columnName: columnName,
+		dataType:   dataType,
+		unit:       unit,
+	}
 }
 
 type Int64MetricValueMetadata struct {
-	QueryMetricValueMetadata
+	queryMetricValueMetadata
+}
+
+func NewInt64MetricValueMetadata(name string, columnName string, dataType pdata.MetricDataType,
+	unit string) Int64MetricValueMetadata {
+
+	return Int64MetricValueMetadata{
+		queryMetricValueMetadata: newQueryMetricValueMetadata(name, columnName, dataType, unit),
+	}
 }
 
 type Float64MetricValueMetadata struct {
-	QueryMetricValueMetadata
+	queryMetricValueMetadata
 }
 
-type Int64MetricValue struct {
+func NewFloat64MetricValueMetadata(name string, columnName string, dataType pdata.MetricDataType,
+	unit string) Float64MetricValueMetadata {
+
+	return Float64MetricValueMetadata{
+		queryMetricValueMetadata: newQueryMetricValueMetadata(name, columnName, dataType, unit),
+	}
+}
+
+type int64MetricValue struct {
 	Int64MetricValueMetadata
-	Val int64
+	value int64
 }
 
-type Float64MetricValue struct {
+type float64MetricValue struct {
 	Float64MetricValueMetadata
-	Val float64
+	value float64
 }
 
-func (metadata QueryMetricValueMetadata) Name() string {
-	return metadata.MetricName
+func (metadata queryMetricValueMetadata) Name() string {
+	return metadata.name
 }
 
-func (metadata QueryMetricValueMetadata) ColumnName() string {
-	return metadata.MetricColumnName
+func (metadata queryMetricValueMetadata) ColumnName() string {
+	return metadata.columnName
 }
 
-func (metadata QueryMetricValueMetadata) DataType() pdata.MetricDataType {
-	return metadata.MetricDataType
+func (metadata queryMetricValueMetadata) DataType() pdata.MetricDataType {
+	return metadata.dataType
 }
 
-func (metadata QueryMetricValueMetadata) Unit() string {
-	return metadata.MetricUnit
+func (metadata queryMetricValueMetadata) Unit() string {
+	return metadata.unit
 }
 
 func (metadata Int64MetricValueMetadata) ValueHolder() interface{} {
@@ -80,24 +107,24 @@ func (metadata Float64MetricValueMetadata) ValueHolder() interface{} {
 	return &valueHolder
 }
 
-func (value Int64MetricValue) Value() interface{} {
-	return value.Val
+func (value int64MetricValue) Value() interface{} {
+	return value.value
 }
 
-func (value Float64MetricValue) Value() interface{} {
-	return value.Val
+func (value float64MetricValue) Value() interface{} {
+	return value.value
 }
 
-func NewInt64MetricValue(metadata Int64MetricValueMetadata, valueHolder interface{}) Int64MetricValue {
-	return Int64MetricValue{
+func newInt64MetricValue(metadata Int64MetricValueMetadata, valueHolder interface{}) int64MetricValue {
+	return int64MetricValue{
 		Int64MetricValueMetadata: metadata,
-		Val:                      *valueHolder.(*int64),
+		value:                    *valueHolder.(*int64),
 	}
 }
 
-func NewFloat64MetricValue(metadata Float64MetricValueMetadata, valueHolder interface{}) Float64MetricValue {
-	return Float64MetricValue{
+func newFloat64MetricValue(metadata Float64MetricValueMetadata, valueHolder interface{}) float64MetricValue {
+	return float64MetricValue{
 		Float64MetricValueMetadata: metadata,
-		Val:                        *valueHolder.(*float64),
+		value:                      *valueHolder.(*float64),
 	}
 }

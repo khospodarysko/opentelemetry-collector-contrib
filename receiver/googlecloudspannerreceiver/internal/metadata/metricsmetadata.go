@@ -82,15 +82,15 @@ func toLabelValue(labelValueMetadata LabelValueMetadata, row *spanner.Row) (Labe
 
 	switch labelValueMetadataCasted := labelValueMetadata.(type) {
 	case StringLabelValueMetadata:
-		value = NewStringLabelValue(labelValueMetadataCasted, valueHolder)
+		value = newStringLabelValue(labelValueMetadataCasted, valueHolder)
 	case Int64LabelValueMetadata:
-		value = NewInt64LabelValue(labelValueMetadataCasted, valueHolder)
+		value = newInt64LabelValue(labelValueMetadataCasted, valueHolder)
 	case BoolLabelValueMetadata:
-		value = NewBoolLabelValue(labelValueMetadataCasted, valueHolder)
+		value = newBoolLabelValue(labelValueMetadataCasted, valueHolder)
 	case StringSliceLabelValueMetadata:
-		value = NewStringSliceLabelValue(labelValueMetadataCasted, valueHolder)
+		value = newStringSliceLabelValue(labelValueMetadataCasted, valueHolder)
 	case ByteSliceLabelValueMetadata:
-		value = NewByteSliceLabelValue(labelValueMetadataCasted, valueHolder)
+		value = newByteSliceLabelValue(labelValueMetadataCasted, valueHolder)
 	}
 
 	return value, nil
@@ -122,9 +122,9 @@ func toMetricValue(metricValueMetadata MetricValueMetadata, row *spanner.Row) (M
 
 	switch metricValueMetadataCasted := metricValueMetadata.(type) {
 	case Int64MetricValueMetadata:
-		value = NewInt64MetricValue(metricValueMetadataCasted, valueHolder)
+		value = newInt64MetricValue(metricValueMetadataCasted, valueHolder)
 	case Float64MetricValueMetadata:
-		value = NewFloat64MetricValue(metricValueMetadataCasted, valueHolder)
+		value = newFloat64MetricValue(metricValueMetadataCasted, valueHolder)
 	}
 
 	return value, nil
@@ -180,26 +180,26 @@ func (metadata *MetricsMetadata) toMetrics(databaseID *datasource.DatabaseID, ti
 		dataPoint := dataPoints.AppendEmpty()
 
 		switch valueCasted := metricValue.(type) {
-		case Float64MetricValue:
-			dataPoint.SetDoubleVal(valueCasted.Val)
-		case Int64MetricValue:
-			dataPoint.SetIntVal(valueCasted.Val)
+		case float64MetricValue:
+			dataPoint.SetDoubleVal(valueCasted.value)
+		case int64MetricValue:
+			dataPoint.SetIntVal(valueCasted.value)
 		}
 
 		dataPoint.SetTimestamp(pdata.NewTimestampFromTime(timestamp))
 
 		for _, labelValue := range labelValues {
 			switch valueCasted := labelValue.(type) {
-			case StringLabelValue:
-				dataPoint.Attributes().InsertString(valueCasted.LabelName, valueCasted.Val)
-			case BoolLabelValue:
-				dataPoint.Attributes().InsertBool(valueCasted.LabelName, valueCasted.Val)
-			case Int64LabelValue:
-				dataPoint.Attributes().InsertInt(valueCasted.LabelName, valueCasted.Val)
-			case StringSliceLabelValue:
-				dataPoint.Attributes().InsertString(valueCasted.LabelName, valueCasted.Val)
-			case ByteSliceLabelValue:
-				dataPoint.Attributes().InsertString(valueCasted.LabelName, valueCasted.Val)
+			case stringLabelValue:
+				dataPoint.Attributes().InsertString(valueCasted.name, valueCasted.value)
+			case boolLabelValue:
+				dataPoint.Attributes().InsertBool(valueCasted.name, valueCasted.value)
+			case int64LabelValue:
+				dataPoint.Attributes().InsertInt(valueCasted.name, valueCasted.value)
+			case stringSliceLabelValue:
+				dataPoint.Attributes().InsertString(valueCasted.name, valueCasted.value)
+			case byteSliceLabelValue:
+				dataPoint.Attributes().InsertString(valueCasted.name, valueCasted.value)
 			}
 		}
 

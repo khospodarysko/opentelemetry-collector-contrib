@@ -36,32 +36,18 @@ type Label struct {
 
 func (label Label) toLabelValueMetadata() (metadata.LabelValueMetadata, error) {
 	var valueMetadata metadata.LabelValueMetadata
-	labelMetadata := metadata.QueryLabelValueMetadata{
-		LabelName:       label.Name,
-		LabelColumnName: label.ColumnName,
-	}
 
 	switch label.ValueType {
 	case labelValueTypeString:
-		valueMetadata = metadata.StringLabelValueMetadata{
-			QueryLabelValueMetadata: labelMetadata,
-		}
+		valueMetadata = metadata.NewStringLabelValueMetadata(label.Name, label.ColumnName)
 	case labelValueTypeInt:
-		valueMetadata = metadata.Int64LabelValueMetadata{
-			QueryLabelValueMetadata: labelMetadata,
-		}
+		valueMetadata = metadata.NewInt64LabelValueMetadata(label.Name, label.ColumnName)
 	case labelValueTypeBool:
-		valueMetadata = metadata.BoolLabelValueMetadata{
-			QueryLabelValueMetadata: labelMetadata,
-		}
+		valueMetadata = metadata.NewBoolLabelValueMetadata(label.Name, label.ColumnName)
 	case labelValueTypeStringSlice:
-		valueMetadata = metadata.StringSliceLabelValueMetadata{
-			QueryLabelValueMetadata: labelMetadata,
-		}
+		valueMetadata = metadata.NewStringSliceLabelValueMetadata(label.Name, label.ColumnName)
 	case labelValueTypeByteSlice:
-		valueMetadata = metadata.ByteSliceLabelValueMetadata{
-			QueryLabelValueMetadata: labelMetadata,
-		}
+		valueMetadata = metadata.NewByteSliceLabelValueMetadata(label.Name, label.ColumnName)
 	default:
 		return nil, fmt.Errorf("invalid value type received for label `%v`", label.Name)
 	}
