@@ -23,7 +23,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component/componenttest"
 	"go.opentelemetry.io/collector/config"
-	"go.opentelemetry.io/collector/config/configcheck"
 	"go.opentelemetry.io/collector/config/configtest"
 	"go.opentelemetry.io/collector/receiver/scraperhelper"
 )
@@ -42,7 +41,6 @@ func TestLoadConfig(t *testing.T) {
 	assert.Equal(t, len(cfg.Receivers), 1)
 
 	receiver := cfg.Receivers[config.NewID(typeStr)].(*Config)
-	require.NoError(t, configcheck.ValidateConfig(receiver))
 
 	assert.Equal(t, 120*time.Second, receiver.CollectionInterval)
 	assert.Equal(t, 10, receiver.TopMetricsQueryMaxRows)

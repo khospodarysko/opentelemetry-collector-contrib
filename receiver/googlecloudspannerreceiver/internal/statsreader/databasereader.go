@@ -22,6 +22,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/googlecloudspannerreceiver/internal/datasource"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/googlecloudspannerreceiver/internal/metadata"
 )
 
 type DatabaseReader struct {
@@ -31,6 +32,7 @@ type DatabaseReader struct {
 }
 
 func NewDatabaseReader(ctx context.Context,
+	parsedMetadata []*metadata.MetricsMetadata,
 	databaseID *datasource.DatabaseID,
 	serviceAccountPath string,
 	readerConfig ReaderConfig,
@@ -42,21 +44,29 @@ func NewDatabaseReader(ctx context.Context,
 		return nil, err
 	}
 
+	readers := initializeReaders(logger, parsedMetadata, database, readerConfig)
+
 	return &DatabaseReader{
 		database: database,
 		logger:   logger,
-		readers: []Reader{
-			newTopQueryStatsReader(logger, database, readerConfig),
-			newTotalQueryStatsReader(logger, database, readerConfig),
-			newTopReadStatsReader(logger, database, readerConfig),
-			newTotalReadStatsReader(logger, database, readerConfig),
-			newTopTransactionStatsReader(logger, database, readerConfig),
-			newTotalTransactionStatsReader(logger, database, readerConfig),
-			newTopLockStatsReader(logger, database, readerConfig),
-			newTotalLockStatsReader(logger, database, readerConfig),
-			newActiveQueriesSummaryReader(logger, database),
-		},
+		readers:  readers,
 	}, nil
+}
+
+func initializeReaders(logger *zap.Logger, parsedMetadata []*metadata.MetricsMetadata,
+	database *datasource.Database, readerConfig ReaderConfig) []Reader {
+	var readers []Reader
+
+	for _, mData := range parsedMetadata {
+		switch mData.MetadataType() {
+		case metadata.MetadataTypeCurrentStats:
+			readers = append(readers, newCurrentStatsReader(logger, database, mData, readerConfig))
+		case metadata.MetadataTypeIntervalStats:
+			readers = append(readers, newIntervalStatsReader(logger, database, mData, readerConfig))
+		}
+	}
+
+	return readers
 }
 
 func (databaseReader *DatabaseReader) Name() string {

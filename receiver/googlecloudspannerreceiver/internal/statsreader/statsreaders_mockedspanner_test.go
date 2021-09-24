@@ -115,7 +115,7 @@ func createIntervalStatsReaderWithMaxRowsLimit(client *spanner.Client, backfillE
 }
 
 func TestStatsReaders_Read(t *testing.T) {
-	timestamp := nowAtStartOfMinute()
+	timestamp := shiftToStartOfMinute(time.Now().UTC())
 	ctx := context.Background()
 	server, err := spannertest.NewServer(":0")
 	require.Nil(t, err)
