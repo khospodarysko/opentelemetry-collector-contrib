@@ -62,7 +62,7 @@ func newGoogleCloudSpannerReceiver(
 	return r, nil
 }
 
-func (receiver *googleCloudSpannerReceiver) Start(ctx context.Context, host component.Host) error {
+func (receiver *googleCloudSpannerReceiver) Start(ctx context.Context, _ component.Host) error {
 	ctx, receiver.cancel = context.WithCancel(ctx)
 	err := receiver.initializeProjectReaders(ctx)
 

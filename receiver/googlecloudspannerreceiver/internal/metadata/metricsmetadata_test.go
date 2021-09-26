@@ -21,7 +21,6 @@ import (
 	"cloud.google.com/go/spanner"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/collector/model/pdata"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/googlecloudspannerreceiver/internal/datasource"
 )
@@ -36,131 +35,89 @@ func databaseID() *datasource.DatabaseID {
 	return datasource.NewDatabaseID(projectID, instanceID, databaseName)
 }
 
-func TestMetricsMetadata_Timestamp_TimestampColumnName(t *testing.T) {
-	expected := time.Now().UTC()
-	metadata := &MetricsMetadata{
-		TimestampColumnName: timestampColumnName,
+func TestMetricsMetadata_Timestamp(t *testing.T) {
+	testCases := map[string]struct {
+		metadata        *MetricsMetadata
+		rowColumnNames  []string
+		rowColumnValues []interface{}
+		errorRequired   bool
+	}{
+		"Happy path":               {&MetricsMetadata{TimestampColumnName: timestampColumnName}, []string{timestampColumnName}, []interface{}{time.Now().UTC()}, false},
+		"No timestamp column name": {&MetricsMetadata{}, []string{}, []interface{}{}, false},
+		"With error":               {&MetricsMetadata{TimestampColumnName: "nonExistingColumn"}, []string{timestampColumnName}, []interface{}{time.Now().UTC()}, true},
 	}
 
-	row, _ := spanner.NewRow([]string{timestampColumnName}, []interface{}{expected})
-	timestamp, _ := metadata.timestamp(row)
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			row, _ := spanner.NewRow(testCase.rowColumnNames, testCase.rowColumnValues)
 
-	assert.Equal(t, expected, timestamp)
+			timestamp, err := testCase.metadata.timestamp(row)
+
+			if testCase.errorRequired {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				assert.NotNil(t, timestamp)
+				assert.False(t, timestamp.IsZero())
+
+				if len(testCase.rowColumnValues) == 1 {
+					assert.Equal(t, testCase.rowColumnValues[0], timestamp)
+				}
+			}
+		})
+	}
 }
 
-func TestMetricsMetadata_Timestamp_NoTimestampColumnName(t *testing.T) {
-	metadata := &MetricsMetadata{}
-
-	row, _ := spanner.NewRow([]string{}, []interface{}{})
-	timestamp, _ := metadata.timestamp(row)
-
-	assert.NotNil(t, timestamp)
-	assert.False(t, timestamp.IsZero())
-}
-
-func TestMetricsMetadata_Timestamp_Error(t *testing.T) {
-	expected := time.Now().UTC()
-	metadata := &MetricsMetadata{
-		TimestampColumnName: "nonExistingColumn",
+func TestToLabelValue(t *testing.T) {
+	queryLabelValueMetadata := newQueryLabelValueMetadata(labelName, labelColumnName)
+	rowColumnNames := []string{labelColumnName}
+	testCases := map[string]struct {
+		metadata                 LabelValueMetadata
+		expectedType             LabelValueMetadata
+		expectedValue            interface{}
+		expectedTransformedValue interface{}
+	}{
+		"String label value metadata":       {StringLabelValueMetadata{queryLabelValueMetadata: queryLabelValueMetadata}, stringLabelValue{}, stringValue, nil},
+		"Int64 label value metadata":        {Int64LabelValueMetadata{queryLabelValueMetadata: queryLabelValueMetadata}, int64LabelValue{}, int64Value, nil},
+		"Bool label value metadata":         {BoolLabelValueMetadata{queryLabelValueMetadata: queryLabelValueMetadata}, boolLabelValue{}, boolValue, nil},
+		"String slice label value metadata": {StringSliceLabelValueMetadata{queryLabelValueMetadata: queryLabelValueMetadata}, stringSliceLabelValue{}, []string{stringValue, stringValue}, stringValue + "," + stringValue},
+		"Byte slice label value metadata":   {ByteSliceLabelValueMetadata{queryLabelValueMetadata: queryLabelValueMetadata}, byteSliceLabelValue{}, []byte(stringValue), stringValue},
 	}
 
-	row, _ := spanner.NewRow([]string{timestampColumnName}, []interface{}{expected})
-	_, err := metadata.timestamp(row)
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			row, _ := spanner.NewRow(rowColumnNames, []interface{}{testCase.expectedValue})
 
-	require.Error(t, err)
-}
+			labelValue, _ := toLabelValue(testCase.metadata, row)
 
-func TestToLabelValue_StringLabelValueMetadata(t *testing.T) {
-	labelValueMetadata := StringLabelValueMetadata{
-		queryLabelValueMetadata: newQueryLabelValueMetadata(labelName, labelColumnName),
+			assert.IsType(t, testCase.expectedType, labelValue)
+			assert.Equal(t, labelName, labelValue.Name())
+			assert.Equal(t, labelColumnName, labelValue.ColumnName())
+			if testCase.expectedTransformedValue != nil {
+				assert.Equal(t, testCase.expectedTransformedValue, labelValue.Value())
+			} else {
+				assert.Equal(t, testCase.expectedValue, labelValue.Value())
+			}
+		})
 	}
-
-	row, _ := spanner.NewRow([]string{labelColumnName}, []interface{}{stringValue})
-	labelValue, _ := toLabelValue(labelValueMetadata, row)
-
-	assert.IsType(t, stringLabelValue{}, labelValue)
-	assert.Equal(t, labelName, labelValue.Name())
-	assert.Equal(t, labelColumnName, labelValue.ColumnName())
-	assert.Equal(t, stringValue, labelValue.Value())
-}
-
-func TestToLabelValue_Int64LabelValueMetadata(t *testing.T) {
-	labelValueMetadata := Int64LabelValueMetadata{
-		queryLabelValueMetadata: newQueryLabelValueMetadata(labelName, labelColumnName),
-	}
-
-	row, _ := spanner.NewRow([]string{labelColumnName}, []interface{}{int64Value})
-	labelValue, _ := toLabelValue(labelValueMetadata, row)
-
-	assert.IsType(t, int64LabelValue{}, labelValue)
-	assert.Equal(t, labelName, labelValue.Name())
-	assert.Equal(t, labelColumnName, labelValue.ColumnName())
-	assert.Equal(t, int64Value, labelValue.Value())
-}
-
-func TestToLabelValue_BoolLabelValueMetadata(t *testing.T) {
-	labelValueMetadata := BoolLabelValueMetadata{
-		queryLabelValueMetadata: newQueryLabelValueMetadata(labelName, labelColumnName),
-	}
-
-	row, _ := spanner.NewRow([]string{labelColumnName}, []interface{}{boolValue})
-	labelValue, _ := toLabelValue(labelValueMetadata, row)
-
-	assert.IsType(t, boolLabelValue{}, labelValue)
-	assert.Equal(t, labelName, labelValue.Name())
-	assert.Equal(t, labelColumnName, labelValue.ColumnName())
-	assert.Equal(t, boolValue, labelValue.Value())
-}
-
-func TestToLabelValue_StringSliceLabelValueMetadata(t *testing.T) {
-	labelValueMetadata := StringSliceLabelValueMetadata{
-		queryLabelValueMetadata: newQueryLabelValueMetadata(labelName, labelColumnName),
-	}
-
-	row, _ := spanner.NewRow([]string{labelColumnName}, []interface{}{[]string{stringValue, stringValue}})
-	labelValue, _ := toLabelValue(labelValueMetadata, row)
-
-	assert.IsType(t, stringSliceLabelValue{}, labelValue)
-	assert.Equal(t, labelName, labelValue.Name())
-	assert.Equal(t, labelColumnName, labelValue.ColumnName())
-	assert.Equal(t, stringValue+","+stringValue, labelValue.Value())
-}
-
-func TestToLabelValue_ByteSliceLabelValueMetadata(t *testing.T) {
-	labelValueMetadata := ByteSliceLabelValueMetadata{
-		queryLabelValueMetadata: newQueryLabelValueMetadata(labelName, labelColumnName),
-	}
-
-	row, _ := spanner.NewRow([]string{labelColumnName}, []interface{}{[]byte(stringValue)})
-	labelValue, _ := toLabelValue(labelValueMetadata, row)
-
-	assert.IsType(t, byteSliceLabelValue{}, labelValue)
-	assert.Equal(t, labelName, labelValue.Name())
-	assert.Equal(t, labelColumnName, labelValue.ColumnName())
-	assert.Equal(t, stringValue, labelValue.Value())
 }
 
 func TestMetricsMetadata_ToLabelValues_AllPossibleMetadata(t *testing.T) {
 	stringLabelValueMetadata := StringLabelValueMetadata{
 		queryLabelValueMetadata: newQueryLabelValueMetadata("stringLabelName", "stringLabelColumnName"),
 	}
-
 	boolLabelValueMetadata := BoolLabelValueMetadata{
 		queryLabelValueMetadata: newQueryLabelValueMetadata("boolLabelName", "boolLabelColumnName"),
 	}
-
 	int64LabelValueMetadata := Int64LabelValueMetadata{
 		queryLabelValueMetadata: newQueryLabelValueMetadata("int64LabelName", "int64LabelColumnName"),
 	}
-
 	stringSliceLabelValueMetadata := StringSliceLabelValueMetadata{
 		queryLabelValueMetadata: newQueryLabelValueMetadata("stringSliceLabelName", "stringSliceLabelColumnName"),
 	}
-
 	byteSliceLabelValueMetadata := ByteSliceLabelValueMetadata{
 		queryLabelValueMetadata: newQueryLabelValueMetadata("byteSliceLabelName", "byteSliceLabelColumnName"),
 	}
-
 	queryLabelValuesMetadata := []LabelValueMetadata{
 		stringLabelValueMetadata,
 		boolLabelValueMetadata,
@@ -168,11 +125,7 @@ func TestMetricsMetadata_ToLabelValues_AllPossibleMetadata(t *testing.T) {
 		stringSliceLabelValueMetadata,
 		byteSliceLabelValueMetadata,
 	}
-
-	metadata := MetricsMetadata{
-		QueryLabelValuesMetadata: queryLabelValuesMetadata,
-	}
-
+	metadata := MetricsMetadata{QueryLabelValuesMetadata: queryLabelValuesMetadata}
 	row, _ := spanner.NewRow(
 		[]string{
 			stringLabelValueMetadata.columnName,
@@ -208,27 +161,11 @@ func TestMetricsMetadata_ToLabelValues_AllPossibleMetadata(t *testing.T) {
 
 func TestMetricsMetadata_ToLabelValues_Error(t *testing.T) {
 	stringLabelValueMetadata := StringLabelValueMetadata{
-		queryLabelValueMetadata: newQueryLabelValueMetadata("stringLabelName", "stringLabelColumnName"),
-	}
-
-	boolLabelValueMetadata := BoolLabelValueMetadata{
 		queryLabelValueMetadata: newQueryLabelValueMetadata("nonExisting", "nonExistingColumn"),
 	}
-
-	queryLabelValuesMetadata := []LabelValueMetadata{
-		stringLabelValueMetadata,
-		boolLabelValueMetadata,
-	}
-
-	metadata := MetricsMetadata{
-		QueryLabelValuesMetadata: queryLabelValuesMetadata,
-	}
-
-	row, _ := spanner.NewRow(
-		[]string{
-			stringLabelValueMetadata.columnName},
-		[]interface{}{
-			stringValue})
+	queryLabelValuesMetadata := []LabelValueMetadata{stringLabelValueMetadata}
+	metadata := MetricsMetadata{QueryLabelValuesMetadata: queryLabelValuesMetadata}
+	row, _ := spanner.NewRow([]string{}, []interface{}{})
 
 	labelValues, err := metadata.toLabelValues(row)
 
@@ -236,36 +173,32 @@ func TestMetricsMetadata_ToLabelValues_Error(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestToMetricValueWithInt64MetricValueMetadata(t *testing.T) {
-	metricValueMetadata := Int64MetricValueMetadata{
-		queryMetricValueMetadata: newQueryMetricValueMetadata(metricName, metricColumnName, metricDataType, metricUnit),
+func TestToMetricValue(t *testing.T) {
+	queryMetricValueMetadata := newQueryMetricValueMetadata(metricName, metricColumnName, metricDataType, metricUnit)
+	rowColumnNames := []string{metricColumnName}
+	testCases := map[string]struct {
+		metadata      MetricValueMetadata
+		expectedType  MetricValueMetadata
+		expectedValue interface{}
+	}{
+		"Int64 label value metadata": {Int64MetricValueMetadata{queryMetricValueMetadata: queryMetricValueMetadata}, int64MetricValue{}, int64Value},
+		"Bool label value metadata":  {Float64MetricValueMetadata{queryMetricValueMetadata: queryMetricValueMetadata}, float64MetricValue{}, float64Value},
 	}
 
-	row, _ := spanner.NewRow([]string{metricColumnName}, []interface{}{int64Value})
-	metricValue, _ := toMetricValue(metricValueMetadata, row)
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			row, _ := spanner.NewRow(rowColumnNames, []interface{}{testCase.expectedValue})
 
-	assert.IsType(t, int64MetricValue{}, metricValue)
-	assert.Equal(t, metricName, metricValue.Name())
-	assert.Equal(t, metricColumnName, metricValue.ColumnName())
-	assert.Equal(t, metricDataType, metricValue.DataType())
-	assert.Equal(t, metricUnit, metricValue.Unit())
-	assert.Equal(t, int64Value, metricValue.Value())
-}
+			metricValue, _ := toMetricValue(testCase.metadata, row)
 
-func TestToMetricValueWithFloat64MetricValueMetadata(t *testing.T) {
-	metricValueMetadata := Float64MetricValueMetadata{
-		queryMetricValueMetadata: newQueryMetricValueMetadata(metricName, metricColumnName, metricDataType, metricUnit),
+			assert.IsType(t, testCase.expectedType, metricValue)
+			assert.Equal(t, metricName, metricValue.Name())
+			assert.Equal(t, metricColumnName, metricValue.ColumnName())
+			assert.Equal(t, metricDataType, metricValue.DataType())
+			assert.Equal(t, metricUnit, metricValue.Unit())
+			assert.Equal(t, testCase.expectedValue, metricValue.Value())
+		})
 	}
-
-	row, _ := spanner.NewRow([]string{metricColumnName}, []interface{}{float64Value})
-	metricValue, _ := toMetricValue(metricValueMetadata, row)
-
-	assert.IsType(t, float64MetricValue{}, metricValue)
-	assert.Equal(t, metricName, metricValue.Name())
-	assert.Equal(t, metricColumnName, metricValue.ColumnName())
-	assert.Equal(t, metricDataType, metricValue.DataType())
-	assert.Equal(t, metricUnit, metricValue.Unit())
-	assert.Equal(t, float64Value, metricValue.Value())
 }
 
 func TestMetricsMetadata_ToMetricValues_AllPossibleMetadata(t *testing.T) {
@@ -273,29 +206,18 @@ func TestMetricsMetadata_ToMetricValues_AllPossibleMetadata(t *testing.T) {
 		queryMetricValueMetadata: newQueryMetricValueMetadata("int64MetricName",
 			"int64MetricColumnName", metricDataType, metricUnit),
 	}
-
 	float64MetricValueMetadata := Float64MetricValueMetadata{
 		queryMetricValueMetadata: newQueryMetricValueMetadata("float64MetricName",
 			"float64MetricColumnName", metricDataType, metricUnit),
 	}
-
 	queryMetricValuesMetadata := []MetricValueMetadata{
 		int64MetricValueMetadata,
 		float64MetricValueMetadata,
 	}
-
-	metadata := MetricsMetadata{
-		QueryMetricValuesMetadata: queryMetricValuesMetadata,
-	}
-
+	metadata := MetricsMetadata{QueryMetricValuesMetadata: queryMetricValuesMetadata}
 	row, _ := spanner.NewRow(
-		[]string{
-			int64MetricValueMetadata.columnName,
-			float64MetricValueMetadata.columnName},
-		[]interface{}{
-			int64Value,
-			float64Value,
-		})
+		[]string{int64MetricValueMetadata.columnName, float64MetricValueMetadata.columnName},
+		[]interface{}{int64Value, float64Value})
 
 	metricValues, _ := metadata.toMetricValues(row)
 
@@ -310,30 +232,12 @@ func TestMetricsMetadata_ToMetricValues_AllPossibleMetadata(t *testing.T) {
 
 func TestMetricsMetadata_ToMetricValues_Error(t *testing.T) {
 	int64MetricValueMetadata := Int64MetricValueMetadata{
-		queryMetricValueMetadata: newQueryMetricValueMetadata("int64MetricName",
-			"int64MetricColumnName", metricDataType, metricUnit),
-	}
-
-	float64MetricValueMetadata := Float64MetricValueMetadata{
 		queryMetricValueMetadata: newQueryMetricValueMetadata("nonExistingMetricName",
 			"nonExistingMetricColumnName", metricDataType, metricUnit),
 	}
-
-	queryMetricValuesMetadata := []MetricValueMetadata{
-		int64MetricValueMetadata,
-		float64MetricValueMetadata,
-	}
-
-	metadata := MetricsMetadata{
-		QueryMetricValuesMetadata: queryMetricValuesMetadata,
-	}
-
-	row, _ := spanner.NewRow(
-		[]string{
-			int64MetricValueMetadata.columnName},
-		[]interface{}{
-			int64Value,
-		})
+	queryMetricValuesMetadata := []MetricValueMetadata{int64MetricValueMetadata}
+	metadata := MetricsMetadata{QueryMetricValuesMetadata: queryMetricValuesMetadata}
+	row, _ := spanner.NewRow([]string{}, []interface{}{})
 
 	metricValues, err := metadata.toMetricValues(row)
 
@@ -341,205 +245,47 @@ func TestMetricsMetadata_ToMetricValues_Error(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestMetricsMetadata_ToMetrics_MetricDataTypeGauge(t *testing.T) {
-	testMetricsMetadataToMetricsWithSpecificMetricDataType(t, pdata.MetricDataTypeGauge)
-}
-
-func TestMetricsMetadata_ToMetrics_MetricDataTypeSum(t *testing.T) {
-	testMetricsMetadataToMetricsWithSpecificMetricDataType(t, pdata.MetricDataTypeSum)
-}
-
-func testMetricsMetadataToMetricsWithSpecificMetricDataType(t *testing.T, metricDataType pdata.MetricDataType) {
-	timestamp := time.Now().UTC()
-
-	stringLabelValue := stringLabelValue{
-		StringLabelValueMetadata: StringLabelValueMetadata{
-			queryLabelValueMetadata: newQueryLabelValueMetadata("stringLabelName", "stringLabelColumnName"),
-		},
-		value: stringValue,
-	}
-
-	boolLabelValue := boolLabelValue{
-		BoolLabelValueMetadata: BoolLabelValueMetadata{
-			queryLabelValueMetadata: newQueryLabelValueMetadata("boolLabelName", "boolLabelColumnName"),
-		},
-		value: boolValue,
-	}
-
-	int64LabelValue := int64LabelValue{
-		Int64LabelValueMetadata: Int64LabelValueMetadata{
-			queryLabelValueMetadata: newQueryLabelValueMetadata("int64LabelName", "int64LabelColumnName"),
-		},
-		value: int64Value,
-	}
-
-	stringSliceLabelValue := stringSliceLabelValue{
-		StringSliceLabelValueMetadata: StringSliceLabelValueMetadata{
-			queryLabelValueMetadata: newQueryLabelValueMetadata("stringSliceLabelName", "stringSliceLabelColumnName"),
-		},
-		value: stringValue,
-	}
-
-	byteSliceLabelValue := byteSliceLabelValue{
-		ByteSliceLabelValueMetadata: ByteSliceLabelValueMetadata{
-			queryLabelValueMetadata: newQueryLabelValueMetadata("byteSliceLabelName", "byteSliceLabelColumnName"),
-		},
-		value: stringValue,
-	}
-
-	labelValues := []LabelValue{
-		stringLabelValue,
-		boolLabelValue,
-		int64LabelValue,
-		stringSliceLabelValue,
-		byteSliceLabelValue,
-	}
-
-	metricValues := []MetricValue{
-		int64MetricValue{
-			Int64MetricValueMetadata: Int64MetricValueMetadata{
-				queryMetricValueMetadata: newQueryMetricValueMetadata("int64MetricName",
-					"int64MetricColumnName", metricDataType, metricUnit),
-			},
-			value: int64Value,
-		},
-		float64MetricValue{
-			Float64MetricValueMetadata: Float64MetricValueMetadata{
-				queryMetricValueMetadata: newQueryMetricValueMetadata("float64MetricName",
-					"float64MetricColumnName", metricDataType, metricUnit),
-			},
-			value: float64Value,
-		},
-	}
-
-	databaseID := databaseID()
-
-	metadata := MetricsMetadata{
-		MetricNamePrefix: metricNamePrefix,
-	}
-
-	metrics := metadata.toMetrics(databaseID, timestamp, labelValues, metricValues)
-
-	assert.Equal(t, len(metricValues), len(metrics))
-
-	for i, metric := range metrics {
-		assert.Equal(t, 1, metric.DataPointCount())
-		assert.Equal(t, 1, metric.MetricCount())
-		assert.Equal(t, 1, metric.ResourceMetrics().Len())
-		assert.Equal(t, 1, metric.ResourceMetrics().At(0).InstrumentationLibraryMetrics().Len())
-		assert.Equal(t, 1, metric.ResourceMetrics().At(0).InstrumentationLibraryMetrics().At(0).Metrics().Len())
-
-		ilMetric := metric.ResourceMetrics().At(0).InstrumentationLibraryMetrics().At(0).Metrics().At(0)
-
-		assert.Equal(t, metadata.MetricNamePrefix+metricValues[i].Name(), ilMetric.Name())
-		assert.Equal(t, metricValues[i].Unit(), ilMetric.Unit())
-		assert.Equal(t, metricValues[i].DataType(), ilMetric.DataType())
-
-		var dataPoint pdata.NumberDataPoint
-
-		if metricDataType == pdata.MetricDataTypeGauge {
-			assert.NotNil(t, ilMetric.Gauge())
-			assert.Equal(t, 1, ilMetric.Gauge().DataPoints().Len())
-			dataPoint = ilMetric.Gauge().DataPoints().At(0)
-		} else {
-			assert.NotNil(t, ilMetric.Sum())
-			assert.Equal(t, 1, ilMetric.Sum().DataPoints().Len())
-			dataPoint = ilMetric.Sum().DataPoints().At(0)
-		}
-
-		switch metricValues[i].(type) {
-		case int64MetricValue:
-			assert.Equal(t, metricValues[i].Value(), dataPoint.IntVal())
-		case float64MetricValue:
-			assert.Equal(t, metricValues[i].Value(), dataPoint.DoubleVal())
-		}
-
-		assert.Equal(t, pdata.NewTimestampFromTime(timestamp), dataPoint.Timestamp())
-
-		assert.Equal(t, 3+len(labelValues), dataPoint.Attributes().Len())
-
-		attributesMap := dataPoint.Attributes()
-
-		value, exists := attributesMap.Get(projectIDLabelName)
-
-		assert.True(t, exists)
-		assert.Equal(t, databaseID.ProjectID(), value.StringVal())
-
-		value, exists = attributesMap.Get(instanceIDLabelName)
-
-		assert.True(t, exists)
-		assert.Equal(t, databaseID.InstanceID(), value.StringVal())
-
-		value, exists = attributesMap.Get(databaseLabelName)
-
-		assert.True(t, exists)
-		assert.Equal(t, databaseID.DatabaseName(), value.StringVal())
-
-		value, exists = attributesMap.Get(stringLabelValue.Name())
-
-		assert.True(t, exists)
-		assert.Equal(t, stringLabelValue.Value(), value.StringVal())
-
-		value, exists = attributesMap.Get(boolLabelValue.Name())
-
-		assert.True(t, exists)
-		assert.Equal(t, boolLabelValue.Value(), value.BoolVal())
-
-		value, exists = attributesMap.Get(int64LabelValue.Name())
-
-		assert.True(t, exists)
-		assert.Equal(t, int64LabelValue.Value(), value.IntVal())
-
-		value, exists = attributesMap.Get(stringSliceLabelValue.Name())
-
-		assert.True(t, exists)
-		assert.Equal(t, stringSliceLabelValue.Value(), value.StringVal())
-
-		value, exists = attributesMap.Get(byteSliceLabelValue.Name())
-
-		assert.True(t, exists)
-		assert.Equal(t, byteSliceLabelValue.Value(), value.StringVal())
-	}
-}
-
 func TestMetricsMetadata_RowToMetrics(t *testing.T) {
 	timestamp := time.Now().UTC()
-
 	labelValueMetadata := StringLabelValueMetadata{
 		queryLabelValueMetadata: newQueryLabelValueMetadata(labelName, labelColumnName),
 	}
-
 	metricValueMetadata := Int64MetricValueMetadata{
 		queryMetricValueMetadata: newQueryMetricValueMetadata(metricName, metricColumnName, metricDataType, metricUnit),
 	}
-
 	queryLabelValuesMetadata := []LabelValueMetadata{labelValueMetadata}
 	queryMetricValuesMetadata := []MetricValueMetadata{metricValueMetadata}
-
 	databaseID := databaseID()
-
 	metadata := MetricsMetadata{
 		MetricNamePrefix:          metricNamePrefix,
 		TimestampColumnName:       timestampColumnName,
 		QueryLabelValuesMetadata:  queryLabelValuesMetadata,
 		QueryMetricValuesMetadata: queryMetricValuesMetadata,
 	}
+	testCases := map[string]struct {
+		rowColumnNames  []string
+		rowColumnValues []interface{}
+		expectError     bool
+	}{
+		"Happy path":            {[]string{labelColumnName, metricColumnName, timestampColumnName}, []interface{}{stringValue, int64Value, timestamp}, false},
+		"Error on timestamp":    {[]string{labelColumnName, metricColumnName}, []interface{}{stringValue, int64Value}, true},
+		"Error on label value":  {[]string{metricColumnName, timestampColumnName}, []interface{}{int64Value, timestamp}, true},
+		"Error on metric value": {[]string{labelColumnName, timestampColumnName}, []interface{}{stringValue, timestamp}, true},
+	}
 
-	row, _ := spanner.NewRow(
-		[]string{
-			labelColumnName,
-			metricColumnName,
-			timestampColumnName,
-		},
-		[]interface{}{
-			stringValue,
-			int64Value,
-			timestamp,
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			row, _ := spanner.NewRow(testCase.rowColumnNames, testCase.rowColumnValues)
+			metrics, err := metadata.RowToMetrics(databaseID, row)
+
+			if testCase.expectError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, 1, len(metrics))
+			}
 		})
-
-	metrics, _ := metadata.RowToMetrics(databaseID, row)
-
-	assert.Equal(t, 1, len(metrics))
+	}
 }
 
 func TestMetricsMetadata_MetadataType(t *testing.T) {
@@ -553,9 +299,7 @@ func TestMetricsMetadata_MetadataType(t *testing.T) {
 
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
-			metricsMetadata := &MetricsMetadata{
-				TimestampColumnName: testCase.timestampColumnName,
-			}
+			metricsMetadata := &MetricsMetadata{TimestampColumnName: testCase.timestampColumnName}
 
 			assert.Equal(t, testCase.expectedMetadataType, metricsMetadata.MetadataType())
 		})
