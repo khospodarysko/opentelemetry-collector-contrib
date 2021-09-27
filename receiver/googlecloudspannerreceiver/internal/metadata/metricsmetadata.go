@@ -166,14 +166,16 @@ func (metadata *MetricsMetadata) toMetrics(databaseID *datasource.DatabaseID, ti
 		metric := ilm.Metrics().AppendEmpty()
 		metric.SetName(metadata.MetricNamePrefix + metricValue.Name())
 		metric.SetUnit(metricValue.Unit())
-		metric.SetDataType(metricValue.DataType())
+		metric.SetDataType(metricValue.DataType().MetricDataType())
 
 		var dataPoints pdata.NumberDataPointSlice
 
-		switch metricValue.DataType() {
+		switch metricValue.DataType().MetricDataType() {
 		case pdata.MetricDataTypeGauge:
 			dataPoints = metric.Gauge().DataPoints()
 		case pdata.MetricDataTypeSum:
+			metric.Sum().SetAggregationTemporality(metricValue.DataType().AggregationTemporality())
+			metric.Sum().SetIsMonotonic(metricValue.DataType().IsMonotonic())
 			dataPoints = metric.Sum().DataPoints()
 		}
 

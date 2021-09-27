@@ -17,36 +17,26 @@ package metadataparser
 import (
 	"fmt"
 
-	"go.opentelemetry.io/collector/model/pdata"
-
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/googlecloudspannerreceiver/internal/metadata"
 )
 
 const (
-	metricDataTypeGauge = "gauge"
-	metricDataTypeSum   = "sum"
-
 	metricValueTypeInt   = "int"
 	metricValueTypeFloat = "float"
 )
 
 type Metric struct {
 	Label    `yaml:",inline"`
-	DataType string `yaml:"data_type"`
-	Unit     string `yaml:"unit"`
+	DataType MetricType `yaml:"data"`
+	Unit     string     `yaml:"unit"`
 }
 
 func (metric Metric) toMetricValueMetadata() (metadata.MetricValueMetadata, error) {
 	var valueMetadata metadata.MetricValueMetadata
-	var dataType pdata.MetricDataType
 
-	switch metric.DataType {
-	case metricDataTypeGauge:
-		dataType = pdata.MetricDataTypeGauge
-	case metricDataTypeSum:
-		dataType = pdata.MetricDataTypeSum
-	default:
-		return nil, fmt.Errorf("invalid data type received for metric `%v`", metric.Name)
+	dataType, err := metric.DataType.toMetricDataType()
+	if err != nil {
+		return nil, fmt.Errorf("invalid value data type received for metric `%v`", metric.Name)
 	}
 
 	switch metric.ValueType {

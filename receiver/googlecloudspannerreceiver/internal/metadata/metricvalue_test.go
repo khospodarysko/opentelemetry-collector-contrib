@@ -21,6 +21,7 @@ import (
 )
 
 func TestInt64MetricValueMetadata(t *testing.T) {
+	metricDataType := metricValueDataType{dataType: metricDataType}
 	metadata := Int64MetricValueMetadata{
 		queryMetricValueMetadata{
 			name:       metricName,
@@ -41,6 +42,7 @@ func TestInt64MetricValueMetadata(t *testing.T) {
 }
 
 func TestFloat64MetricValueMetadata(t *testing.T) {
+	metricDataType := metricValueDataType{dataType: metricDataType}
 	metadata := Float64MetricValueMetadata{
 		queryMetricValueMetadata{
 			name:       metricName,
@@ -61,6 +63,7 @@ func TestFloat64MetricValueMetadata(t *testing.T) {
 }
 
 func TestInt64MetricValue(t *testing.T) {
+	metricDataType := metricValueDataType{dataType: metricDataType}
 	metadata := Int64MetricValueMetadata{
 		queryMetricValueMetadata{
 			name:       metricName,
@@ -81,6 +84,7 @@ func TestInt64MetricValue(t *testing.T) {
 }
 
 func TestFloat64MetricValue(t *testing.T) {
+	metricDataType := metricValueDataType{dataType: metricDataType}
 	metadata := Float64MetricValueMetadata{
 		queryMetricValueMetadata{
 			name:       metricName,
@@ -101,6 +105,7 @@ func TestFloat64MetricValue(t *testing.T) {
 }
 
 func TestNewQueryMetricValueMetadata(t *testing.T) {
+	metricDataType := metricValueDataType{dataType: metricDataType}
 	metadata := newQueryMetricValueMetadata(metricName, metricColumnName, metricDataType, metricUnit)
 
 	assert.Equal(t, metricName, metadata.name)
@@ -110,6 +115,7 @@ func TestNewQueryMetricValueMetadata(t *testing.T) {
 }
 
 func TestNewInt64MetricValueMetadata(t *testing.T) {
+	metricDataType := metricValueDataType{dataType: metricDataType}
 	metadata := NewInt64MetricValueMetadata(metricName, metricColumnName, metricDataType, metricUnit)
 
 	assert.Equal(t, metricName, metadata.name)
@@ -119,6 +125,7 @@ func TestNewInt64MetricValueMetadata(t *testing.T) {
 }
 
 func TestNewFloat64MetricValueMetadata(t *testing.T) {
+	metricDataType := metricValueDataType{dataType: metricDataType}
 	metadata := NewFloat64MetricValueMetadata(metricName, metricColumnName, metricDataType, metricUnit)
 
 	assert.Equal(t, metricName, metadata.name)
@@ -128,6 +135,7 @@ func TestNewFloat64MetricValueMetadata(t *testing.T) {
 }
 
 func TestNewInt64MetricValue(t *testing.T) {
+	metricDataType := metricValueDataType{dataType: metricDataType}
 	metadata := Int64MetricValueMetadata{
 		queryMetricValueMetadata{
 			name:       metricName,
@@ -147,6 +155,7 @@ func TestNewInt64MetricValue(t *testing.T) {
 }
 
 func TestNewFloat64MetricValue(t *testing.T) {
+	metricDataType := metricValueDataType{dataType: metricDataType}
 	metadata := Float64MetricValueMetadata{
 		queryMetricValueMetadata{
 			name:       metricName,

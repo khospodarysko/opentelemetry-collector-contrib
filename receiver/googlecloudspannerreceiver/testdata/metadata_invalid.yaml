@@ -10,5 +10,6 @@ metadata:
       - name: "metric_name"
         column_name: "METRIC_NAME"
         value_type: "int"
-        data_type: "invalid"
+        data:
+          type: "invalid"
         unit: "metricUnit"

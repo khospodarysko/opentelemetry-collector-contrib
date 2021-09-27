@@ -13,7 +13,8 @@ metadata:
       - name: "metric_name"
         column_name: "METRIC_NAME"
         value_type: "int"
-        data_type: "gauge"
+        data:
+          type: "gauge"
         unit: "metric_unit"
 #
 # -------------------------------------------- Interval Stats ----------------------------------------------------------
@@ -30,5 +31,6 @@ metadata:
       - name: "metric_name"
         column_name: "METRIC_NAME"
         value_type: "int"
-        data_type: "gauge"
+        data:
+          type: "gauge"
         unit: "metric_unit"

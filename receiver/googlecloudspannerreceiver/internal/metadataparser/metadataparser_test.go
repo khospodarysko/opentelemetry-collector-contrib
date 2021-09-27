@@ -78,6 +78,6 @@ func assertMetricsMetadata(t *testing.T, expectedName string, metricsMetadata *m
 	assert.Equal(t, "metric_name", metricsMetadata.QueryMetricValuesMetadata[0].Name())
 	assert.Equal(t, "METRIC_NAME", metricsMetadata.QueryMetricValuesMetadata[0].ColumnName())
 	assert.Equal(t, "metric_unit", metricsMetadata.QueryMetricValuesMetadata[0].Unit())
-	assert.Equal(t, pdata.MetricDataTypeGauge, metricsMetadata.QueryMetricValuesMetadata[0].DataType())
+	assert.Equal(t, pdata.MetricDataTypeGauge, metricsMetadata.QueryMetricValuesMetadata[0].DataType().MetricDataType())
 	assert.IsType(t, metadata.Int64MetricValueMetadata{}, metricsMetadata.QueryMetricValuesMetadata[0])
 }

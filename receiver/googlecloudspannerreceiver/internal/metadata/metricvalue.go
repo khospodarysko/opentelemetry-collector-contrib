@@ -14,11 +14,9 @@
 
 package metadata
 
-import "go.opentelemetry.io/collector/model/pdata"
-
 type MetricValueMetadata interface {
 	ValueMetadata
-	DataType() pdata.MetricDataType
+	DataType() MetricDataType
 	Unit() string
 }
 
@@ -30,11 +28,11 @@ type MetricValue interface {
 type queryMetricValueMetadata struct {
 	name       string
 	columnName string
-	dataType   pdata.MetricDataType
+	dataType   MetricDataType
 	unit       string
 }
 
-func newQueryMetricValueMetadata(name string, columnName string, dataType pdata.MetricDataType,
+func newQueryMetricValueMetadata(name string, columnName string, dataType MetricDataType,
 	unit string) queryMetricValueMetadata {
 
 	return queryMetricValueMetadata{
@@ -49,7 +47,7 @@ type Int64MetricValueMetadata struct {
 	queryMetricValueMetadata
 }
 
-func NewInt64MetricValueMetadata(name string, columnName string, dataType pdata.MetricDataType,
+func NewInt64MetricValueMetadata(name string, columnName string, dataType MetricDataType,
 	unit string) Int64MetricValueMetadata {
 
 	return Int64MetricValueMetadata{
@@ -61,7 +59,7 @@ type Float64MetricValueMetadata struct {
 	queryMetricValueMetadata
 }
 
-func NewFloat64MetricValueMetadata(name string, columnName string, dataType pdata.MetricDataType,
+func NewFloat64MetricValueMetadata(name string, columnName string, dataType MetricDataType,
 	unit string) Float64MetricValueMetadata {
 
 	return Float64MetricValueMetadata{
@@ -87,7 +85,7 @@ func (metadata queryMetricValueMetadata) ColumnName() string {
 	return metadata.columnName
 }
 
-func (metadata queryMetricValueMetadata) DataType() pdata.MetricDataType {
+func (metadata queryMetricValueMetadata) DataType() MetricDataType {
 	return metadata.dataType
 }
 

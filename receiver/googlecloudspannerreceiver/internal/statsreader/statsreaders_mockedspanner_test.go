@@ -49,10 +49,11 @@ func createMetricsMetadataFromTimestampColumn(query string, timestampColumn stri
 		metadata.NewStringLabelValueMetadata("metric_label", "METRIC_LABEL"),
 	}
 
+	metricDataType := metadata.NewMetricDataType(pdata.MetricDataTypeGauge, pdata.AggregationTemporalityUnspecified, false)
+
 	// Metrics
 	queryMetricValuesMetadata := []metadata.MetricValueMetadata{
-		metadata.NewInt64MetricValueMetadata("metric_value", "METRIC_VALUE",
-			pdata.MetricDataTypeGauge, "unit"),
+		metadata.NewInt64MetricValueMetadata("metric_value", "METRIC_VALUE", metricDataType, "unit"),
 	}
 
 	return &metadata.MetricsMetadata{

@@ -174,6 +174,7 @@ func TestMetricsMetadata_ToLabelValues_Error(t *testing.T) {
 }
 
 func TestToMetricValue(t *testing.T) {
+	metricDataType := metricValueDataType{dataType: metricDataType}
 	queryMetricValueMetadata := newQueryMetricValueMetadata(metricName, metricColumnName, metricDataType, metricUnit)
 	rowColumnNames := []string{metricColumnName}
 	testCases := map[string]struct {
@@ -202,6 +203,7 @@ func TestToMetricValue(t *testing.T) {
 }
 
 func TestMetricsMetadata_ToMetricValues_AllPossibleMetadata(t *testing.T) {
+	metricDataType := metricValueDataType{dataType: metricDataType}
 	int64MetricValueMetadata := Int64MetricValueMetadata{
 		queryMetricValueMetadata: newQueryMetricValueMetadata("int64MetricName",
 			"int64MetricColumnName", metricDataType, metricUnit),
@@ -231,6 +233,7 @@ func TestMetricsMetadata_ToMetricValues_AllPossibleMetadata(t *testing.T) {
 }
 
 func TestMetricsMetadata_ToMetricValues_Error(t *testing.T) {
+	metricDataType := metricValueDataType{dataType: metricDataType}
 	int64MetricValueMetadata := Int64MetricValueMetadata{
 		queryMetricValueMetadata: newQueryMetricValueMetadata("nonExistingMetricName",
 			"nonExistingMetricColumnName", metricDataType, metricUnit),
@@ -246,6 +249,7 @@ func TestMetricsMetadata_ToMetricValues_Error(t *testing.T) {
 }
 
 func TestMetricsMetadata_RowToMetrics(t *testing.T) {
+	metricDataType := metricValueDataType{dataType: metricDataType}
 	timestamp := time.Now().UTC()
 	labelValueMetadata := StringLabelValueMetadata{
 		queryLabelValueMetadata: newQueryLabelValueMetadata(labelName, labelColumnName),

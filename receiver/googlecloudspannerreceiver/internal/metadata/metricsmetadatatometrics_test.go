@@ -61,7 +61,7 @@ func testMetricsMetadataToMetrics(t *testing.T, metricDataType pdata.MetricDataT
 
 		assert.Equal(t, metadata.MetricNamePrefix+metricValues[i].Name(), ilMetric.Name())
 		assert.Equal(t, metricValues[i].Unit(), ilMetric.Unit())
-		assert.Equal(t, metricValues[i].DataType(), ilMetric.DataType())
+		assert.Equal(t, metricValues[i].DataType().MetricDataType(), ilMetric.DataType())
 
 		var dataPoint pdata.NumberDataPoint
 
@@ -71,6 +71,8 @@ func testMetricsMetadataToMetrics(t *testing.T, metricDataType pdata.MetricDataT
 			dataPoint = ilMetric.Gauge().DataPoints().At(0)
 		} else {
 			assert.NotNil(t, ilMetric.Sum())
+			assert.Equal(t, pdata.AggregationTemporalityDelta, ilMetric.Sum().AggregationTemporality())
+			assert.True(t, ilMetric.Sum().IsMonotonic())
 			assert.Equal(t, 1, ilMetric.Sum().DataPoints().Len())
 			dataPoint = ilMetric.Sum().DataPoints().At(0)
 		}
@@ -129,18 +131,19 @@ func allPossibleLabelValues() []LabelValue {
 }
 
 func allPossibleMetricValues(metricDataType pdata.MetricDataType) []MetricValue {
+	dataType := NewMetricDataType(metricDataType, pdata.AggregationTemporalityDelta, true)
 	return []MetricValue{
 		int64MetricValue{
 			Int64MetricValueMetadata: Int64MetricValueMetadata{
 				queryMetricValueMetadata: newQueryMetricValueMetadata("int64MetricName",
-					"int64MetricColumnName", metricDataType, metricUnit),
+					"int64MetricColumnName", dataType, metricUnit),
 			},
 			value: int64Value,
 		},
 		float64MetricValue{
 			Float64MetricValueMetadata: Float64MetricValueMetadata{
 				queryMetricValueMetadata: newQueryMetricValueMetadata("float64MetricName",
-					"float64MetricColumnName", metricDataType, metricUnit),
+					"float64MetricColumnName", dataType, metricUnit),
 			},
 			value: float64Value,
 		},
