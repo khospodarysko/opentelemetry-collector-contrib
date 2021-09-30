@@ -31,7 +31,8 @@ all-modules:
 	@echo $(ALL_MODULES) | tr ' ' '\n' | sort
 
 .PHONY: all
-all: common gotest otelcontribcol otelcontribcol-unstable
+#all: common gotest otelcontribcol otelcontribcol-unstable
+all: common otelcontribcol otelcontribcol-unstable
 
 .PHONY: e2e-test
 e2e-test: otelcontribcol otelcontribcol-unstable
