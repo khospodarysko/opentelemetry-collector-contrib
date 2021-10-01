@@ -4,7 +4,7 @@ go 1.17
 
 require (
 	github.com/aws/aws-sdk-go v1.40.51
-	github.com/google/cadvisor v0.39.2
+	github.com/google/cadvisor v0.40.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/awsutil v0.36.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/containerinsight v0.36.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/k8s v0.36.0
@@ -23,19 +23,19 @@ require (
 )
 
 require (
-	github.com/Microsoft/go-winio v0.4.15 // indirect
+	github.com/Microsoft/go-winio v0.4.17 // indirect
 	github.com/StackExchange/wmi v1.2.1 // indirect
 	github.com/blang/semver v3.5.1+incompatible // indirect
 	github.com/checkpoint-restore/go-criu/v5 v5.0.0 // indirect
 	github.com/cilium/ebpf v0.5.0 // indirect
 	github.com/containerd/console v1.0.2 // indirect
-	github.com/containerd/containerd v1.4.4 // indirect
+	github.com/containerd/containerd v1.5.2 // indirect
 	github.com/containerd/ttrpc v1.0.2 // indirect
 	github.com/coreos/go-systemd/v22 v22.3.2 // indirect
 	github.com/cyphar/filepath-securejoin v0.2.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/docker/distribution v2.7.1-0.20190205005809-0d3efadf0154+incompatible // indirect
-	github.com/docker/docker v20.10.2+incompatible // indirect
+	github.com/docker/distribution v2.7.1+incompatible // indirect
+	github.com/docker/docker v20.10.7+incompatible // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.4.0 // indirect
 	github.com/euank/go-kmsg-parser v2.0.0+incompatible // indirect
@@ -89,7 +89,7 @@ require (
 	github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635 // indirect
 	github.com/tklauser/go-sysconf v0.3.5 // indirect
 	github.com/tklauser/numcpus v0.2.2 // indirect
-	github.com/vishvananda/netlink v1.1.0 // indirect
+	github.com/vishvananda/netlink v1.1.1-0.20201029203352-d40f9887b852 // indirect
 	github.com/vishvananda/netns v0.0.0-20200728191858-db3c7e526aae // indirect
 	github.com/willf/bitset v1.1.11 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.24.0 // indirect
