@@ -26,6 +26,7 @@ type Config struct {
 
 	TopMetricsQueryMaxRows int       `mapstructure:"top_metrics_query_max_rows"`
 	BackfillEnabled        bool      `mapstructure:"backfill_enabled"`
+	CardinalityTotalLimit  int       `mapstructure:"cardinality_total_limit"`
 	Projects               []Project `mapstructure:"projects"`
 }
 
@@ -53,6 +54,11 @@ func (config *Config) Validate() error {
 	if config.TopMetricsQueryMaxRows > 100 {
 		return fmt.Errorf("%v `top_metrics_query_max_rows` must be not greater than 100, current value is %v",
 			config.ID(), config.TopMetricsQueryMaxRows)
+	}
+
+	if config.CardinalityTotalLimit < 0 {
+		return fmt.Errorf("%v `cardinality_total_limit` must be not negative, current value is %vs",
+			config.ID(), config.CardinalityTotalLimit)
 	}
 
 	if len(config.Projects) <= 0 {

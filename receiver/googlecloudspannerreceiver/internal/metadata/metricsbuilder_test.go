@@ -15,12 +15,15 @@
 package metadata
 
 import (
+	"errors"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/model/pdata"
+
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/googlecloudspannerreceiver/internal/filter"
 )
 
 const (
@@ -28,37 +31,100 @@ const (
 	metricName2 = "metricName2"
 )
 
+type errorItemFilterResolver struct {
+}
+
+func (r errorItemFilterResolver) Resolve(string) (filter.ItemFilter, error) {
+	return nil, errors.New("error on resolve")
+}
+
+func (r errorItemFilterResolver) Shutdown() error {
+	return errors.New("error on shutdown")
+}
+
+type errorFilter struct {
+}
+
+func (f errorFilter) Filter(source []*filter.Item) ([]*filter.Item, error) {
+	return nil, errors.New("error on filter")
+}
+
+func (f errorFilter) Shutdown() error {
+	return nil
+}
+
+func (f errorFilter) TotalLimit() int {
+	return 0
+}
+
+func (f errorFilter) LimitByTimestamp() int {
+	return 0
+}
+
+type itemFilterResolverWithErrorFilter struct {
+}
+
+func (r itemFilterResolverWithErrorFilter) Resolve(string) (filter.ItemFilter, error) {
+	return errorFilter{}, nil
+}
+
+func (r itemFilterResolverWithErrorFilter) Shutdown() error {
+	return nil
+}
+
 type testData struct {
 	dataPoints           []*MetricsDataPoint
 	expectedGroupingKeys []MetricsDataPointKey
 	expectedGroups       map[MetricsDataPointKey][]*MetricsDataPoint
 }
 
-func TestMetricsBuilder_Build(t *testing.T) {
+func TestNewMetricsFromDataPointBuilder(t *testing.T) {
+	itemFilterResolver := filter.NewNopItemFilterResolver()
+
+	builder := NewMetricsFromDataPointBuilder(itemFilterResolver)
+	builderCasted := builder.(*metricsFromDataPointBuilder)
+	defer executeShutdown(t, builderCasted, false)
+
+	assert.Equal(t, itemFilterResolver, builderCasted.filterResolver)
+}
+
+func TestMetricsFromDataPointBuilder_Build(t *testing.T) {
 	testCases := map[string]struct {
-		metricsDataType pdata.MetricDataType
+		metricsDataType    pdata.MetricDataType
+		itemFilterResolver filter.ItemFilterResolver
+		expectError        bool
 	}{
-		"Gauge": {pdata.MetricDataTypeGauge},
-		"Sum":   {pdata.MetricDataTypeSum},
+		"Gauge":                      {pdata.MetricDataTypeGauge, filter.NewNopItemFilterResolver(), false},
+		"Sum":                        {pdata.MetricDataTypeSum, filter.NewNopItemFilterResolver(), false},
+		"Gauge with filtering error": {pdata.MetricDataTypeGauge, errorItemFilterResolver{}, true},
+		"Sum with filtering error":   {pdata.MetricDataTypeSum, errorItemFilterResolver{}, true},
 	}
 
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
-			testMetricsBuilderBuild(t, testCase.metricsDataType)
+			testMetricsFromDataPointBuilderBuild(t, testCase.metricsDataType, testCase.itemFilterResolver, testCase.expectError)
 		})
 	}
 }
 
-func testMetricsBuilderBuild(t *testing.T, metricDataType pdata.MetricDataType) {
+func testMetricsFromDataPointBuilderBuild(t *testing.T, metricDataType pdata.MetricDataType,
+	itemFilterResolver filter.ItemFilterResolver, expectError bool) {
+
 	dataForTesting := generateTestData(metricDataType)
-	metricsBuilder := &MetricsBuilder{}
+	builder := &metricsFromDataPointBuilder{filterResolver: itemFilterResolver}
+	defer executeShutdown(t, builder, expectError)
 	expectedGroupingKeysByMetricName := make(map[string]MetricsDataPointKey, len(dataForTesting.expectedGroupingKeys))
 
 	for _, expectedGroupingKey := range dataForTesting.expectedGroupingKeys {
 		expectedGroupingKeysByMetricName[expectedGroupingKey.MetricName] = expectedGroupingKey
 	}
 
-	metric := metricsBuilder.Build(dataForTesting.dataPoints)
+	metric, err := builder.Build(dataForTesting.dataPoints)
+	if expectError {
+		require.Error(t, err)
+		return
+	}
+	require.NoError(t, err)
 
 	assert.Equal(t, len(dataForTesting.dataPoints), metric.DataPointCount())
 	assert.Equal(t, len(dataForTesting.expectedGroups), metric.MetricCount())
@@ -104,28 +170,108 @@ func testMetricsBuilderBuild(t *testing.T, metricDataType pdata.MetricDataType) 
 	}
 }
 
-func TestGroup(t *testing.T) {
-	dataForTesting := generateTestData(metricDataType)
+func TestMetricsFromDataPointBuilder_GroupAndFilter(t *testing.T) {
+	testCases := map[string]struct {
+		itemFilterResolver filter.ItemFilterResolver
+		expectError        bool
+	}{
+		"Happy path":           {filter.NewNopItemFilterResolver(), false},
+		"With filtering error": {errorItemFilterResolver{}, true},
+	}
 
-	groupedDataPoints := group(dataForTesting.dataPoints)
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			builder := &metricsFromDataPointBuilder{
+				filterResolver: testCase.itemFilterResolver,
+			}
+			defer executeShutdown(t, builder, testCase.expectError)
+			dataForTesting := generateTestData(metricDataType)
 
-	assert.Equal(t, len(dataForTesting.expectedGroups), len(groupedDataPoints))
+			groupedDataPoints, err := builder.groupAndFilter(dataForTesting.dataPoints)
 
-	for expectedGroupingKey, expectedGroupPoints := range dataForTesting.expectedGroups {
-		dataPointsByKey := groupedDataPoints[expectedGroupingKey]
+			if testCase.expectError {
+				require.Error(t, err)
+				require.Nil(t, groupedDataPoints)
+				return
+			}
+			require.NoError(t, err)
+			require.NotNil(t, groupedDataPoints)
 
-		assert.Equal(t, len(expectedGroupPoints), len(dataPointsByKey))
+			assert.Equal(t, len(dataForTesting.expectedGroups), len(groupedDataPoints))
 
-		for i, point := range expectedGroupPoints {
-			assert.Equal(t, point, dataPointsByKey[i])
-		}
+			for expectedGroupingKey, expectedGroupPoints := range dataForTesting.expectedGroups {
+				dataPointsByKey := groupedDataPoints[expectedGroupingKey]
+
+				assert.Equal(t, len(expectedGroupPoints), len(dataPointsByKey))
+
+				for i, point := range expectedGroupPoints {
+					assert.Equal(t, point, dataPointsByKey[i])
+				}
+			}
+		})
 	}
 }
 
-func TestGroup_NilDataPoints(t *testing.T) {
-	groupedDataPoints := group(nil)
+func TestMetricsFromDataPointBuilder_GroupAndFilter_NilDataPoints(t *testing.T) {
+	builder := &metricsFromDataPointBuilder{
+		filterResolver: filter.NewNopItemFilterResolver(),
+	}
+	defer executeShutdown(t, builder, false)
+
+	groupedDataPoints, err := builder.groupAndFilter(nil)
+
+	require.NoError(t, err)
 
 	assert.Equal(t, 0, len(groupedDataPoints))
+}
+
+func TestMetricsFromDataPointBuilder_Filter(t *testing.T) {
+	dataForTesting := generateTestData(metricDataType)
+	testCases := map[string]struct {
+		itemFilterResolver filter.ItemFilterResolver
+		expectError        bool
+	}{
+		"Happy path":      {filter.NewNopItemFilterResolver(), false},
+		"Error on filter": {itemFilterResolverWithErrorFilter{}, true},
+	}
+
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			builder := &metricsFromDataPointBuilder{
+				filterResolver: testCase.itemFilterResolver,
+			}
+			defer executeShutdown(t, builder, false)
+
+			filteredDataPoints, err := builder.filter(metricName1, dataForTesting.dataPoints)
+			if testCase.expectError {
+				require.Error(t, err)
+				require.Nil(t, filteredDataPoints)
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, dataForTesting.dataPoints, filteredDataPoints)
+			}
+		})
+	}
+}
+
+func TestMetricsFromDataPointBuilder_Shutdown(t *testing.T) {
+	testCases := map[string]struct {
+		itemFilterResolver filter.ItemFilterResolver
+		expectError        bool
+	}{
+		"Happy path": {filter.NewNopItemFilterResolver(), false},
+		"Error":      {errorItemFilterResolver{}, true},
+	}
+
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			builder := &metricsFromDataPointBuilder{
+				filterResolver: testCase.itemFilterResolver,
+			}
+
+			executeShutdown(t, builder, testCase.expectError)
+		})
+	}
 }
 
 func generateTestData(metricDataType pdata.MetricDataType) testData {
@@ -177,5 +323,14 @@ func newMetricDataPoint(metricName string, timestamp time.Time, labelValues []La
 		databaseID:  databaseID(),
 		labelValues: labelValues,
 		metricValue: metricValue,
+	}
+}
+
+func executeShutdown(t *testing.T, metricsBuilder MetricsBuilder, expectError bool) {
+	err := metricsBuilder.Shutdown()
+	if expectError {
+		require.Error(t, err)
+	} else {
+		require.NoError(t, err)
 	}
 }

@@ -25,6 +25,7 @@ receivers:
     collection_interval: 60s
     top_metrics_query_max_rows: 100
     backfill_enabled: true
+    cardinality_total_limit: 200000
     projects:
       - project_id: "spanner project 1"
         service_account_key: "path to spanner project 1 service account json key"
@@ -52,9 +53,10 @@ receivers:
 
 Brief description of configuration properties:
 - **googlecloudspanner** - name of the Cloud Spanner Receiver related section in OpenTelemetry collector configuration file
-- **collection_interval** - this receiver runs on an interval. Each time it runs, it queries Google Cloud Spanner, creates metrics and sends them to the next consumer(60 seconds by default)
+- **collection_interval** - this receiver runs on an interval. Each time it runs, it queries Google Cloud Spanner, creates metrics and sends them to the next consumer(60 seconds by default). **It is not recommended change the default value fo collection interval, since new values for metrics in Spanner database appear with 1 minute interval.**
 - **top_metrics_query_max_rows** - max number of rows to fetch from Top N built-in table(100 by default)
 - **backfill_enabled** - turn on/off 1-hour data backfill(by default it is turned off)
+- **cardinality_total_limit** - total cardinality handling limit(amount of active series per 24 hours period). If specified - turns on cardinality filtering/handling. If zero or not specified - cardinality is not handled. You can read [this document](cardinality.md) for getting more information about cardinality handling/filtering.
 - **projects** - list of GCP projects
     - **project_id** - identifier of GCP project
     - **service_account_key** - path to service account JSON key
