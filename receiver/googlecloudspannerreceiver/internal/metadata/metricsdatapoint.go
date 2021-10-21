@@ -15,9 +15,8 @@
 package metadata
 
 import (
-	"time"
-
 	"go.opentelemetry.io/collector/model/pdata"
+	"time"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/googlecloudspannerreceiver/internal/datasource"
 )
@@ -36,34 +35,20 @@ type MetricsDataPoint struct {
 	metricValue MetricValue
 }
 
-func (mdp *MetricsDataPoint) FillDataPoint(dataPoint pdata.NumberDataPoint) {
-	switch valueCasted := mdp.metricValue.(type) {
-	case float64MetricValue:
-		dataPoint.SetDoubleVal(valueCasted.value)
-	case int64MetricValue:
-		dataPoint.SetIntVal(valueCasted.value)
-	}
+func (mdp *MetricsDataPoint) CopyToNumberDataPoint(point pdata.NumberDataPoint) {
+	point.SetTimestamp(pdata.NewTimestampFromTime(mdp.timestamp))
 
-	dataPoint.SetTimestamp(pdata.NewTimestampFromTime(mdp.timestamp))
+	mdp.metricValue.SetValueTo(point)
+
+	attributes := point.Attributes()
+
+	attributes.InsertString(projectIDLabelName, mdp.databaseID.ProjectID())
+	attributes.InsertString(instanceIDLabelName, mdp.databaseID.InstanceID())
+	attributes.InsertString(databaseLabelName, mdp.databaseID.DatabaseName())
 
 	for _, labelValue := range mdp.labelValues {
-		switch valueCasted := labelValue.(type) {
-		case stringLabelValue:
-			dataPoint.Attributes().InsertString(valueCasted.name, valueCasted.value)
-		case boolLabelValue:
-			dataPoint.Attributes().InsertBool(valueCasted.name, valueCasted.value)
-		case int64LabelValue:
-			dataPoint.Attributes().InsertInt(valueCasted.name, valueCasted.value)
-		case stringSliceLabelValue:
-			dataPoint.Attributes().InsertString(valueCasted.name, valueCasted.value)
-		case byteSliceLabelValue:
-			dataPoint.Attributes().InsertString(valueCasted.name, valueCasted.value)
-		}
+		labelValue.SetAttributesTo(attributes)
 	}
-
-	dataPoint.Attributes().InsertString(projectIDLabelName, mdp.databaseID.ProjectID())
-	dataPoint.Attributes().InsertString(instanceIDLabelName, mdp.databaseID.InstanceID())
-	dataPoint.Attributes().InsertString(databaseLabelName, mdp.databaseID.DatabaseName())
 }
 
 func (mdp *MetricsDataPoint) GroupingKey() MetricsDataPointGroupingKey {

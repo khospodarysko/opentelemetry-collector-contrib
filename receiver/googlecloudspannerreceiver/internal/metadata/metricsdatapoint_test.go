@@ -60,7 +60,7 @@ func TestMetricsMetadata_FillDataPoint(t *testing.T) {
 			metricValue: metricValue,
 		}
 
-		metricsDataPoint.FillDataPoint(dataPoint)
+		metricsDataPoint.CopyToNumberDataPoint(dataPoint)
 
 		assertMetricValue(t, metricValue, dataPoint)
 

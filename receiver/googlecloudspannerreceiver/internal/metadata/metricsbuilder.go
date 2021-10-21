@@ -58,7 +58,7 @@ func (b *MetricsBuilder) Build(dataPoints []*MetricsDataPoint) pdata.Metrics {
 			}
 
 			for _, point := range points {
-				point.FillDataPoint(dataPointSlice.AppendEmpty())
+				point.CopyToNumberDataPoint(dataPointSlice.AppendEmpty())
 			}
 		}
 	}

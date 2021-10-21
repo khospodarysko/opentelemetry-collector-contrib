@@ -14,6 +14,8 @@
 
 package metadata
 
+import "go.opentelemetry.io/collector/model/pdata"
+
 type MetricValueMetadata interface {
 	ValueMetadata
 	DataType() MetricDataType
@@ -23,6 +25,7 @@ type MetricValueMetadata interface {
 type MetricValue interface {
 	MetricValueMetadata
 	Value() interface{}
+	SetValueTo(ndp pdata.NumberDataPoint)
 }
 
 type queryMetricValueMetadata struct {
@@ -125,4 +128,12 @@ func newFloat64MetricValue(metadata Float64MetricValueMetadata, valueHolder inte
 		Float64MetricValueMetadata: metadata,
 		value:                      *valueHolder.(*float64),
 	}
+}
+
+func (value int64MetricValue) SetValueTo(point pdata.NumberDataPoint) {
+	point.SetIntVal(value.value)
+}
+
+func (value float64MetricValue) SetValueTo(point pdata.NumberDataPoint) {
+	point.SetDoubleVal(value.value)
 }

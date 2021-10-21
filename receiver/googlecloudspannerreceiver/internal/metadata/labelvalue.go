@@ -15,6 +15,7 @@
 package metadata
 
 import (
+	"go.opentelemetry.io/collector/model/pdata"
 	"sort"
 	"strings"
 )
@@ -26,6 +27,7 @@ type LabelValueMetadata interface {
 type LabelValue interface {
 	LabelValueMetadata
 	Value() interface{}
+	SetAttributesTo(attributes pdata.AttributeMap)
 }
 
 type queryLabelValueMetadata struct {
@@ -212,4 +214,21 @@ func newByteSliceLabelValue(metadata ByteSliceLabelValueMetadata, valueHolder in
 		ByteSliceLabelValueMetadata: metadata,
 		value:                       string(*valueHolder.(*[]byte)),
 	}
+}
+
+func (value stringLabelValue) SetAttributesTo(attributes pdata.AttributeMap) {
+	attributes.InsertString(value.name, value.value)
+}
+func (value boolLabelValue) SetAttributesTo(attributes pdata.AttributeMap) {
+	attributes.InsertBool(value.name, value.value)
+}
+func (value int64LabelValue) SetAttributesTo(attributes pdata.AttributeMap) {
+	attributes.InsertInt(value.name, value.value)
+}
+func (value stringSliceLabelValue) SetAttributesTo(attributes pdata.AttributeMap) {
+	attributes.InsertString(value.name, value.value)
+}
+
+func (value byteSliceLabelValue) SetAttributesTo(attributes pdata.AttributeMap) {
+	attributes.InsertString(value.name, value.value)
 }
