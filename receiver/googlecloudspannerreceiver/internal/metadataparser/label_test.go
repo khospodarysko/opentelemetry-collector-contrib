@@ -34,11 +34,11 @@ func TestLabel_ToLabelValueMetadata(t *testing.T) {
 		expectedType interface{}
 		expectError  bool
 	}{
-		"Value type is string":       {labelValueTypeString, metadata.StringLabelValueMetadata{}, false},
-		"Value type is int":          {labelValueTypeInt, metadata.Int64LabelValueMetadata{}, false},
-		"Value type is bool":         {labelValueTypeBool, metadata.BoolLabelValueMetadata{}, false},
-		"Value type is string slice": {labelValueTypeStringSlice, metadata.StringSliceLabelValueMetadata{}, false},
-		"Value type is byte slice":   {labelValueTypeByteSlice, metadata.ByteSliceLabelValueMetadata{}, false},
+		"Value type is string":       {labelValueTypeString, metadata.NewLabelValueMetadata("", "", labelValueTypeString), false},
+		"Value type is int":          {labelValueTypeInt, metadata.NewLabelValueMetadata("", "", labelValueTypeInt), false},
+		"Value type is bool":         {labelValueTypeBool, metadata.NewLabelValueMetadata("", "", labelValueTypeBool), false},
+		"Value type is string slice": {labelValueTypeStringSlice, metadata.NewLabelValueMetadata("", "", labelValueTypeStringSlice), false},
+		"Value type is byte slice":   {labelValueTypeByteSlice, metadata.NewLabelValueMetadata("", "", labelValueTypeByteSlice), false},
 		"Value type is unknown":      {"unknown", nil, true},
 	}
 

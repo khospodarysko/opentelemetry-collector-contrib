@@ -72,7 +72,7 @@ func assertMetricsMetadata(t *testing.T, expectedName string, metricsMetadata *m
 	assert.Equal(t, 1, len(metricsMetadata.QueryLabelValuesMetadata))
 	assert.Equal(t, "label_name", metricsMetadata.QueryLabelValuesMetadata[0].Name())
 	assert.Equal(t, "LABEL_NAME", metricsMetadata.QueryLabelValuesMetadata[0].ColumnName())
-	assert.IsType(t, metadata.StringLabelValueMetadata{}, metricsMetadata.QueryLabelValuesMetadata[0])
+	assert.IsType(t, metadata.NewLabelValueMetadata("", "", labelValueTypeString), metricsMetadata.QueryLabelValuesMetadata[0])
 
 	assert.Equal(t, 1, len(metricsMetadata.QueryMetricValuesMetadata))
 	assert.Equal(t, "metric_name", metricsMetadata.QueryMetricValuesMetadata[0].Name())

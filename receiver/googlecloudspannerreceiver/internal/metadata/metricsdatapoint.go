@@ -54,7 +54,7 @@ func (mdp *MetricsDataPoint) CopyToNumberDataPoint(point pdata.NumberDataPoint) 
 func (mdp *MetricsDataPoint) GroupingKey() MetricsDataPointGroupingKey {
 	return MetricsDataPointGroupingKey{
 		MetricName:     mdp.metricName,
-		MetricUnit:     mdp.metricValue.Unit(),
-		MetricDataType: mdp.metricValue.DataType(),
+		MetricUnit:     mdp.metricValue.Metadata().Unit(),
+		MetricDataType: mdp.metricValue.Metadata().DataType(),
 	}
 }
