@@ -77,22 +77,9 @@ func toLabelValue(labelValueMetadata LabelValueMetadata, row *spanner.Row) (Labe
 		return nil, err
 	}
 
-	var value LabelValue
+	labelValue := labelValueMetadata.NewLabelValue(valueHolder)
 
-	switch labelValueMetadataCasted := labelValueMetadata.(type) {
-	case StringLabelValueMetadata:
-		value = newStringLabelValue(labelValueMetadataCasted, valueHolder)
-	case Int64LabelValueMetadata:
-		value = newInt64LabelValue(labelValueMetadataCasted, valueHolder)
-	case BoolLabelValueMetadata:
-		value = newBoolLabelValue(labelValueMetadataCasted, valueHolder)
-	case StringSliceLabelValueMetadata:
-		value = newStringSliceLabelValue(labelValueMetadataCasted, valueHolder)
-	case ByteSliceLabelValueMetadata:
-		value = newByteSliceLabelValue(labelValueMetadataCasted, valueHolder)
-	}
-
-	return value, nil
+	return labelValue, nil
 }
 
 func (metadata *MetricsMetadata) toMetricValues(row *spanner.Row) ([]MetricValue, error) {
@@ -117,16 +104,9 @@ func toMetricValue(metricValueMetadata MetricValueMetadata, row *spanner.Row) (M
 		return nil, err
 	}
 
-	var value MetricValue
+	metricValue := metricValueMetadata.NewMetricValue(valueHolder)
 
-	switch metricValueMetadataCasted := metricValueMetadata.(type) {
-	case Int64MetricValueMetadata:
-		value = newInt64MetricValue(metricValueMetadataCasted, valueHolder)
-	case Float64MetricValueMetadata:
-		value = newFloat64MetricValue(metricValueMetadataCasted, valueHolder)
-	}
-
-	return value, nil
+	return metricValue, nil
 }
 
 func (metadata *MetricsMetadata) RowToMetricsDataPoints(databaseID *datasource.DatabaseID, row *spanner.Row) ([]*MetricsDataPoint, error) {
@@ -157,7 +137,7 @@ func (metadata *MetricsMetadata) toMetricsDataPoints(databaseID *datasource.Data
 
 	for _, metricValue := range metricValues {
 		dataPoint := &MetricsDataPoint{
-			metricName:  metadata.MetricNamePrefix + metricValue.Name(),
+			metricName:  metadata.MetricNamePrefix + metricValue.Metadata().Name(),
 			timestamp:   timestamp,
 			databaseID:  databaseID,
 			labelValues: labelValues,
