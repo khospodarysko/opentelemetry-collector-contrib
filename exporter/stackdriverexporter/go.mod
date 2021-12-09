@@ -51,9 +51,9 @@ require (
 	golang.org/x/net v0.0.0-20210716203947-853a461950ff // indirect
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8 // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
-	golang.org/x/sys v0.0.0-20211124211545-fe61309f8881 // indirect
+	golang.org/x/sys v0.0.0-20211205182925-97ca703d548d // indirect
 	golang.org/x/text v0.3.6 // indirect
-	google.golang.org/api v0.61.0 // indirect
+	google.golang.org/api v0.62.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20211206160659-862468c7d6e0 // indirect
 	google.golang.org/grpc v1.42.0 // indirect
