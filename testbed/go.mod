@@ -29,7 +29,8 @@ require (
 	go.opentelemetry.io/collector v0.41.1-0.20211222180302-3db1d1146483
 	go.opentelemetry.io/collector/model v0.41.1-0.20211222180302-3db1d1146483
 	go.uber.org/atomic v1.9.0
-	go.uber.org/zap v1.19.1
+	go.uber.org/multierr v1.7.0
+	go.uber.org/zap v1.20.0
 	golang.org/x/text v0.3.7
 )
 
@@ -178,7 +179,6 @@ require (
 	go.opentelemetry.io/otel/sdk/export/metric v0.26.0 // indirect
 	go.opentelemetry.io/otel/sdk/metric v0.26.0 // indirect
 	go.opentelemetry.io/otel/trace v1.3.0 // indirect
-	go.uber.org/multierr v1.7.0 // indirect
 	golang.org/x/crypto v0.0.0-20210920023735-84f357641f63 // indirect
 	golang.org/x/net v0.0.0-20211209124913-491a49abca63 // indirect
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8 // indirect
